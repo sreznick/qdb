@@ -1,5 +1,5 @@
 
-add_library(pagecache pagecache.cc)
+add_library(pagecache pagecache.cc test.h test.cc)
 
 target_compile_features(pagecache PRIVATE cxx_std_20)
 

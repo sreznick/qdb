@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include "storage/storage.h"
 #include "pagecache/pagecache.h"
+#include "pagecache/test.h"
 
 #include "query.h"
 #include "lexer.h"
@@ -28,7 +29,16 @@ int main(int argc, const char *argv[]) {
     }
     std::cout << storage.is_present() << std::endl;
 
-    PageCache page {storage, {5, 16384}};
+
+
+    PageCache pageCache {storage, {5, 16384}};
+
+    if (std::getenv("RUN_TESTS") != nullptr) {
+        PageCache pageCacheToTest {storage, {3, 4}};
+        PageCacheTest pageCacheTest {pageCacheToTest};
+
+        pageCacheTest.run();
+    }
 
     while (1) {
         printf("sql>");
