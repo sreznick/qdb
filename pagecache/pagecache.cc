@@ -32,7 +32,7 @@ void PageCache::insertPage(PageId pageId, int position) {
 }
 
 void PageCache::removePage(PageId pageId) {
-    if (_isDirty.contains(pageId)) { // flush dirty page on disk
+    if (_isDirty.contains(pageId) && _isDirty.at(pageId)) { // flush dirty page on disk
         _storage.write(_cache[_cachePosition.at(pageId)], pageId);
     }
     _cachePosition.erase(pageId);
