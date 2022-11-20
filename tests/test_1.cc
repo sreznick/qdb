@@ -2,7 +2,7 @@
 #include "pagecache.h"
 
 TEST(Test_1, Test_1_1) {
-    Storage storage("tests/qdb");
+    Storage storage("Testing/qdb");
     if (!storage.is_present()) {
         if (!storage.can_initialize()) {
             std::cerr << "Please specify one of" << std::endl;
