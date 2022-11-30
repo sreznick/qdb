@@ -93,7 +93,7 @@ field_defs :
 ;
 
 type : KW_CHAR LPAREN NUMBER RPAREN {
-         $$ = new query::DataType(query::CharType{$3});
+         $$ = new query::DataType(query::CharType{static_cast<unsigned int>($3)});
        }
 ;
 
