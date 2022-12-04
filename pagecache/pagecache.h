@@ -3,18 +3,35 @@
 #include "storage/storage.h"
 #include "config.h"
 
+#include <cstddef>
+#include <map>
+#include <vector>
+
+struct State {
+        int position;
+        bool dirty;
+};
+
+struct CacheData {
+    std::map<PageId, int> data;
+    std::map<int, PageId> connection;
+    std::map<PageId, State> store;
+};
+
 class PageCache {
 private:
-    Storage _storage;
-    PageCacheConfig _config;
+
+    Storage storage;
+    PageCacheConfig config;
+    CacheData localData;
+    std::byte** cdata;
 
     // находит жертву для вытеснения
     // Это не часть публичного API, поэтому сигнатуру можно поменять, если удобно
     PageId find_victim();
 
 public:
-    PageCache(Storage storage, PageCacheConfig config): _storage(storage), _config(config) {}
-
+    PageCache(Storage storage, PageCacheConfig config): storage(storage), config(config), cdata(new std::byte*[config.pageCount]) {}
     /*
       Создает новую страницу в хранилище и размещает ее в кеше
       Точнее, выделяет страницу в кеше и заполняет ее нулями
@@ -35,7 +52,7 @@ public:
      * Определяет наличие страницы с данным PageId в кеше.
      * Если она там есть, помечает ее как dirty и возвращает 0
      * Если нет, возвращает -1
-     * Если PageId некорректен, возвращает 2
+     * Если PageId некорректен, возвращает -2
      */
     int write(PageId id);
 
@@ -43,5 +60,6 @@ public:
      * Пишут на диск все страницы, помеченные как грязные, снимает с них флаг
      */
     int sync();
-};
 
+    std::pair<std::map<PageId, State>*, std::map<PageId, int>*> get_local_info();
+};

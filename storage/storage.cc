@@ -11,12 +11,16 @@
 
 int write_single(int fd, std::byte* data, int size) {
     int nWritten = 0;
-    while (nWritten < size) {
+    int lap = 0;
+    //std::cout << data << std::endl;
+    while (nWritten < size && lap < 20) {
         int n = write(fd, data + nWritten, size - nWritten);
         if (n < 0) {
             return -200;
         }
         nWritten += n;
+        lap++;
+        //std::cout << fd << " " << nWritten << " " << size << std::endl;
     }
     return 0; 
 }
@@ -103,13 +107,14 @@ int Storage::write(std::byte* data, PageId pageId) {
         int fd = _openFiles[pageId.fileId.id];
 
         int pos = lseek(fd, pageId.id * _config.pageSize, SEEK_SET);
+        
+
         if (pos < 0) {
             return pos;
         }
         if (pos != pageId.id * _config.pageSize) {
             return -100;
         }
-
         int nCopied = write_single(fd, data, _config.pageSize);
         if (nCopied < 0) {
             return -200;
@@ -143,8 +148,6 @@ PageId Storage::create_page(FileId id) {
     if (pos < 0) {
         return {id, -1};
     }
-
-    std::cout << pos << std::endl;
 
     std::byte data[_config.pageSize];
     memset(data, 0, _config.pageSize);
