@@ -10,30 +10,28 @@
 struct State {
         int position;
         bool dirty;
-    };
+};
+
+struct CacheData {
+    std::map<PageId, int> data;
+    std::map<int, PageId> connection;
+    std::map<PageId, State> store;
+};
 
 class PageCache {
 private:
 
     Storage storage;
     PageCacheConfig config;
-
-    std::map<PageId, int> data;
-    std::map<int, PageId> connection;
-    std::map<PageId, State> store;
-
-    int capacity;
-    int nominant;
+    CacheData localData;
     std::byte** cdata;
 
     // находит жертву для вытеснения
     // Это не часть публичного API, поэтому сигнатуру можно поменять, если удобно
     PageId find_victim();
 
-    void add_page(PageId id, int position);
-
 public:
-    PageCache(Storage storage, PageCacheConfig config): storage(storage), config(config), capacity(0), nominant(0), cdata(new std::byte*[config.pageCount]) {}
+    PageCache(Storage storage, PageCacheConfig config): storage(storage), config(config), cdata(new std::byte*[config.pageCount]) {}
     /*
       Создает новую страницу в хранилище и размещает ее в кеше
       Точнее, выделяет страницу в кеше и заполняет ее нулями
