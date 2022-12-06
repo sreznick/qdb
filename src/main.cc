@@ -14,6 +14,7 @@ int main(int argc, const char *argv[]) {
     }
 
     Storage storage(argv[1]);
+    const char* mode = argv[2];
 
     if (!storage.is_present()) {
         if (!storage.can_initialize()) {
@@ -28,8 +29,13 @@ int main(int argc, const char *argv[]) {
     }
     std::cout << storage.is_present() << std::endl;
 
-    PageCache page {storage, {5, 16384}};
+    if (mode[0] == 't') {
+        PageCache page {storage, {3, 4}};
+        page.self_test();
+        return 0;
+    }
 
+    PageCache page {storage, {5, 16384}};
     while (1) {
         printf("sql>");
         fflush(stdout);
