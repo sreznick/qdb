@@ -29,15 +29,6 @@ int main(int argc, const char *argv[]) {
     }
     std::cout << storage.is_present() << std::endl;
 
-    // В комнату зашёл
-    // На зарядку ноут поставил
-
-    // Не буду я жопу показывать
-    // Можешь тест пока починить
-    
-    // 3, 4
-    // Tests that create another page that does not fit in cache buffer
-
     if (mode[0] == 't') {
         PageCache page {storage, {3, 4}};
         page.self_test();
