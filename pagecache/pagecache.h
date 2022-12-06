@@ -1,10 +1,12 @@
-#pragma once
+#ifndef __PAGECACHE
+#define __PAGECACHE
 
 #include "storage/storage.h"
 #include "config.h"
 #include <map>
 #include <cstddef>
 #include <vector>
+#include <assert.h>
 
 struct PageData {
     bool dirty;
@@ -40,6 +42,7 @@ private:
 
 public:
     PageCache(Storage storage, PageCacheConfig config);
+    ~PageCache();
 
     /*
       Создает новую страницу в хранилище и размещает ее в кеше
@@ -70,5 +73,11 @@ public:
      */
     int sync();
 
-    std::map<PageId, PageData, CMP>* _getData();
+
+    /*
+    *  Internal testing
+    */
+    void self_test();
 };
+
+#endif // __PAGECACHE

@@ -22,6 +22,9 @@ private:
 public:
     Storage(fs::path root): _root(root), _config({DEFAULT_PAGE_SIZE}), _openFiles{} {}
     Storage(fs::path root, StorageConfig config): _root(root), _config(config), _openFiles{} {}
+    ~Storage() {
+        // std::filesystem::remove_all(_root);
+    }
 
     bool is_present();
     bool can_initialize();
