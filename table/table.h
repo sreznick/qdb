@@ -1,6 +1,8 @@
 #pragma once
 
 #include <iostream>
+#include <sstream>
+
 #include <map>
 #include <vector>
 #include <memory>
@@ -62,6 +64,15 @@ public:
     std::string typeName() {
         return TypesRegistry::name(_typeTag);
     }
+
+    int outputSize() {
+        int valueSize = 20;
+        switch (_typeTag) {
+            case TypeTag::INT:
+                valueSize = 10;
+        }
+        return std::max(valueSize, static_cast<int>(_name.size()));
+    }
 };
 
 class TableScheme {
@@ -82,6 +93,10 @@ public:
     int fieldSize(int i) {
         return (*_columns)[i].size();
     } 
+
+    int outputSize(int i) {
+        return (*_columns)[i].outputSize();
+    }
 
     int totalSize() {
         int result = 0;
@@ -184,6 +199,46 @@ public:
         return result;
     }
 
+    std::string as_string(int fieldPos) {
+        std::stringstream ss;
+        switch (_scheme->typeTag(fieldPos)) {
+            case TypeTag::INT: {
+                std::string s = std::to_string(getInt(fieldPos));
+                ss << s;
+                break;
+            }
+            case TypeTag::VARCHAR: {
+                ss << getChar(fieldPos);
+            }
+
+        }
+        std::string result = ss.str();
+        return result;
+    }
+
+    void print_header() {
+        for (int i = 0; i < _scheme->columnsCount(); ++i) {
+            std::string name = _scheme->name(i);
+            int d = _scheme->outputSize(i) - name.size();
+            std::cout << _scheme->name(i);
+            for (int i = 0; i < d + 1; ++i) {
+                std::cout << ' ';
+            }
+        }
+        std::cout << std::endl;
+    }
+
+    void print_values() {
+        for (int i = 0; i < _scheme->columnsCount(); ++i) {
+            std::string value = as_string(i);
+            int d = _scheme->outputSize(i) - value.size();
+            std::cout << value;
+            for (int i = 0; i < d + 1; ++i) {
+                std::cout << ' ';
+            }
+        }
+        std::cout << std::endl;
+    }
 };
 
 /*
