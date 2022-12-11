@@ -2,6 +2,8 @@
 
 #include "pagecache/pagecache.h"
 #include "table/table.h"
+#include "index/index.h"
+#include "index/btree.h"
 #include <memory>
 
 std::shared_ptr<Table> create_table(std::shared_ptr<PageCache> pageCache,
@@ -14,4 +16,9 @@ void insert_tuple(std::shared_ptr<PageCache> pageCache,
 std::vector<DenseTuple> select_all(std::shared_ptr<PageCache> pageCache, std::shared_ptr<Table>);
 
 std::vector<DenseTuple> select(std::shared_ptr<Storage> pageCache, std::shared_ptr<Table>);
+
+void create_index(std::shared_ptr<PageCache> pageCache,
+                  std::shared_ptr<Table> table,
+                  std::string fieldName,
+                  IndexType indexType);
 
