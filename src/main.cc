@@ -6,6 +6,9 @@
 #include "lexer.h"
 #include "parser.h"
 
+int initdb(const char*);
+int prompt();
+
 int main(int argc, const char *argv[]) {
     if (argc == 1) {
         std::cerr << "Usage:" << std::endl;
@@ -13,22 +16,19 @@ int main(int argc, const char *argv[]) {
         return 1;
     }
 
-    Storage storage(argv[1]);
-
-    if (!storage.is_present()) {
-        if (!storage.can_initialize()) {
-            std::cerr << "Please specify one of" << std::endl;
-            std::cerr << "  - path to existing storage (to use it)" << std::endl;
-            std::cerr << "  - path to absolutely empty directory (to create storage there)" << std::endl;
-            std::cerr << "  - non-existing path (to create storage there)" << std::endl;
-
-            return 2;
+    const char* command = argv[1];
+    if (strcmp(command, "init") == 0) {
+        if (argc < 3) {
+            std::cout << "Provide path:" << std::endl;
+            return 1;
         }
-        storage.initialize();
+        std::cout << "command: init" << std::endl;
+        return initdb(argv[2]);
+    } else if (strcmp(command, "prompt") == 0) {
+        return prompt();
+    } else {
+        return 1;
     }
-    std::cout << storage.is_present() << std::endl;
-
-    PageCache page {storage, {5, 16384}};
 
     while (1) {
         printf("sql>");
@@ -74,5 +74,33 @@ int main(int argc, const char *argv[]) {
         yy_delete_buffer(state);
     }
 
+    return 0;
+}
+
+int initdb(const char* location) {
+    Storage storage(location);
+
+    std::cout << storage.is_present() << std::endl;
+
+    if (!storage.is_present()) {
+        if (!storage.can_initialize()) {
+            std::cerr << "Please specify one of" << std::endl;
+            std::cerr << "  - path to existing storage (to use it)" << std::endl;
+            std::cerr << "  - path to absolutely empty directory (to create storage there)" << std::endl;
+            std::cerr << "  - non-existing path (to create storage there)" << std::endl;
+
+            return 2;
+        }
+        std::cout << "initializing storage.." << std::endl;
+        storage.initialize();
+    }
+    std::cout << storage.is_present() << std::endl;
+
+    PageCache page {storage, {5, 16384}};
+
+    return 0;
+}
+
+int prompt() {
     return 0;
 }
