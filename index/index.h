@@ -1,0 +1,2 @@
+
+enum IndexType { BTree };
