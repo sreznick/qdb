@@ -41,13 +41,15 @@ int main(int argc, const char *argv[]) {
         tree->insert(5);
         tree->insert(3);
 
-        std::cout << "search for 4: " << tree->search(4).first << " = nullptr\n";
-        std::cout << "search for 5: " << tree->search(5).first << " found 5\n";
+        std::cout << "Search for 4: " << tree->search(4).first << " = nullptr\n";
+        std::cout << "Search for 5: " << tree->search(5).first << " found 5\n";
 
         tree->remove(5);
-        // Fails for remove with bad key but we decided that we don't have 
+        // thee->remove(6)
+        // Fails for remove with bad key but we decided that we don't have this kind of 
+        // But it'll print the reason if fails
 
-        std::cout << "search for 5: " << tree->search(5).first << " = nullptr after delete\n";
+        std::cout << "Search for 5: " << tree->search(5).first << " = nullptr after delete\n";
         std::cout << "Test end";
         return 0;
     }
