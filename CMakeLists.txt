@@ -5,6 +5,8 @@ project(qdb VERSION 1.0)
 add_subdirectory(common)
 add_subdirectory(storage)
 add_subdirectory(pagecache)
+add_subdirectory(qengine)
+add_subdirectory(table)
 
 
 set(SRC_DIR "src")
@@ -22,6 +24,6 @@ add_flex_bison_dependency(LEXER PARSER)
 
 add_executable(qdb "${SRC_DIR}/main.cc" "${LEXER_OUT}" "${PARSER_OUT}")
 target_include_directories(qdb PRIVATE "${PARSER_DIR}" "${SRC_DIR}" "${PROJECT_SOURCE_DIR}/common")
-target_link_libraries(qdb PUBLIC common storage pagecache)
+target_link_libraries(qdb PUBLIC common storage pagecache qengine table)
 target_compile_features(qdb PRIVATE cxx_std_20)
 

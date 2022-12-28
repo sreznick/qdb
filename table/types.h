@@ -3,12 +3,13 @@
 #include <array>
 #include <string>
 
+#include <cctype>
 #include "types.h"
 
 /*
  *  Short values corresponding with base SQL types 
  */
-enum TypeTag {INT, LONG, DOUBLE, BOOL,
+enum TypeTag {UNKNOWN, INT, LONG, DOUBLE, BOOL,
               CHAR, VARCHAR, TEXT};
 
 
@@ -31,7 +32,7 @@ struct TypeInfo {
  */
 class TypesRegistry {
 private:
-    static std::array<TypeInfo, 7> _data;
+    static std::array<TypeInfo, 8> _data;
 public:
     static TypeInfo byId(int typeId) {
         return _data[typeId];
@@ -39,6 +40,17 @@ public:
 
     static TypeTag typeTag(int typeId) {
         return byId(typeId).tag;
+    }
+
+    static TypeTag typeTagByName(std::string name) {
+        for (int i = 0; i < _data.size(); i++) {
+            transform(name.begin(), name.end(), name.begin(), ::toupper);
+            if (_data[i].name == name) {
+                return _data[i].tag;
+            }
+        }
+
+        return TypeTag::UNKNOWN;
     }
 
     static int fixedSize(int typeId) {

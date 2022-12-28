@@ -23,6 +23,7 @@ int write_single(int fd, std::byte* data, int size) {
 
 int read_single(int fd, std::byte* data, int size) {
     int nRead = 0;
+
     while (nRead < size) {
         int n = read(fd, data + nRead, size - nRead);
         if (n < 0) {
@@ -78,21 +79,32 @@ void Storage::close(FileId id) {
 }
     
 int Storage::read(std::byte* data, PageId pageId) {
-    if (_openFiles.contains(pageId.fileId.id)) {
-        int fd = _openFiles[pageId.fileId.id];
+    // PATCH START
+    if (!_openFiles.contains(pageId.fileId.id)) {
+        const char* name = file_path(pageId.fileId).c_str();
+        //std::cout << "going to open file " << name << std::endl;
 
-        int pos = lseek(fd, pageId.id * _config.pageSize, SEEK_SET);
-        if (pos < 0) {
-            return pos;
-        }
-        if (pos != pageId.id * _config.pageSize) {
-            return -100;
-        }
+        int fd = open(name, O_CREAT | O_RDWR, 0644);
+        //std::cout << "fd: " << fd << std::endl;
+        if (fd < 0) { return -1; }
 
-        int nCopied = read_single(fd, data, _config.pageSize);
-        if (nCopied < 0) {
-            return -200;
-        }
+        _openFiles[pageId.fileId.id] = fd;
+    }
+    // PATCH END
+
+    int fd = _openFiles[pageId.fileId.id];
+
+    int pos = lseek(fd, pageId.id * _config.pageSize, SEEK_SET);
+    if (pos < 0) {
+        return pos;
+    }
+    if (pos != pageId.id * _config.pageSize) {
+        return -100;
+    }
+
+    int nCopied = read_single(fd, data, _config.pageSize);
+    if (nCopied < 0) {
+        return -200;
     }
 
     return pageId.id;
@@ -127,10 +139,10 @@ fs::path Storage::file_path(FileId id) {
 PageId Storage::create_page(FileId id) {
     if (!_openFiles.contains(id.id)) {
         const char* name = file_path(id).c_str();
-        std::cout << "going to open file " << name << std::endl;
+        //std::cout << "going to open file " << name << std::endl;
 
         int fd = open(name, O_CREAT | O_RDWR, 0644);
-        std::cout << "fd " << fd << std::endl;
+        //std::cout << "fd " << fd << std::endl;
         if (fd < 0) {
             return {id, -1};
         }
@@ -144,7 +156,7 @@ PageId Storage::create_page(FileId id) {
         return {id, -1};
     }
 
-    std::cout << pos << std::endl;
+    //std::cout << pos << std::endl;
 
     std::byte data[_config.pageSize];
     memset(data, 0, _config.pageSize);

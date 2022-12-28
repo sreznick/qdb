@@ -3,164 +3,103 @@
 #include <string>
 #include <variant>
 #include <vector>
+#include <attribute.h>
+#include <datatype.h>
+#include <parsing_utils.h>
 
 namespace query {
-    class CharType {
-    private:
-        unsigned int _size;
-
+    class BaseQuery {
     public:
-        CharType(unsigned int size): _size(size) {}
-    };
+        std::string query_type;
+        std::string table_name;
 
-    class DataType {
-    private:
-        std::variant<CharType> type;
-
-    public:
-        DataType(CharType charType): type(charType) {
-        }
-    };
-
-
-    class FieldDefinition {
-    private:
-        std::string *_name;
-        DataType *_type;
-
-    public:
-        FieldDefinition(std::string *name, DataType* type): _name(name), _type(type) {
-        }
-    };
-
-    enum Type {CREATE, INSERT, SELECT, DELETE, UPDATE, UNKNOWN};
-
-    class Query2 {
-    };
-
-    class CreateTable : Query2 {
-    private:
-        std::string _name;
-        std::vector<FieldDefinition*>* _fieldDefs;
-    public:
-        CreateTable(std::string name, std::vector<FieldDefinition*>* fieldDefs): _name(name), _fieldDefs(fieldDefs) {
+        BaseQuery(std::string query_type, std::string table_name): query_type(query_type), table_name(table_name) {
         }
 
-        std::string name() {
-            return _name;
+        void printProps() {};
+    };
+
+    class CreateTable : public BaseQuery {
+    public:
+        std::vector<datatypes::Column*>* columns;
+
+        CreateTable(std::string table_name, std::vector<datatypes::Column*>* columns): BaseQuery("CREATE", table_name), columns(columns) {}
+
+        void printProps() {
+            printf("COLUMNS DATA\n");
+
+            for (datatypes::Column* column : *columns) {
+                printf("name: %s\n", column->name.c_str());
+                printf("%s\n", column->datatype->to_s().c_str());
+            }
+            printf("\n");
         }
     };
 
-    class Insert {
-    private:
-        std::string _name;
+    class Insert : public BaseQuery {
     public:
-        Insert(std::string name): _name(name) {
+        std::vector<datatypes::Literal*> insertion_values;
+
+        Insert(std::string tn, std::vector<datatypes::Literal*> insertion_values): BaseQuery("INSERT", tn), insertion_values(insertion_values) {
+
         }
 
-        std::string name() {
-            return _name;
-        }
+        void printProps() {
+            printf("Insertion data:\n");
+            for (datatypes::Literal* literal : insertion_values) {
+                printf("%s :: %s\n", literal->value.c_str(), literal->type.c_str());
+            }
+            printf("\n");
+        };
     };
 
-    class Delete {
-    private:
-        std::string _name;
+    class Select : public BaseQuery {
+        std::vector<datatypes::Expression*> expressions;
+        datatypes::Expression* whereExpr;
+
     public:
-        Delete(std::string name): _name(name) {
+        Select(std::string tn, std::vector<datatypes::Expression*> expressions) : BaseQuery("SELECT", tn), expressions(expressions) {}
+        Select(std::string tn, std::vector<datatypes::Expression*> expressions, datatypes::Expression* whereExpr) : BaseQuery("SELECT", tn), expressions(expressions), whereExpr(whereExpr) {}
+        void printProps() {
+            for (datatypes::Expression* expression : expressions) {
+                std::cout << "\nSelect expression:\n";
+                parsing_utils::printExpression(expression);
+                std::cout << std::endl;
+            }
+
+            if (whereExpr != nullptr) {
+                std::cout << "Where expression:\n";
+                parsing_utils::printExpression(whereExpr);
+                std::cout << std::endl;
+            }
         }
 
-        std::string name() {
-            return _name;
+        std::vector<datatypes::Expression*> getExpressions() {
+            return expressions;
         }
-    };
-
-    class Update {
-    private:
-        std::string _name;
-    public:
-        Update(std::string name): _name(name) {
-        }
-
-        std::string name() {
-            return _name;
-        }
-    };
-
-    class Select {
-    private:
-        std::string _name;
-    public:
-        Select(std::string name): _name(name) {
-        }
-
-        std::string name() {
-            return _name;
-        }
-
     };
 
     class Query {
-    private:
-        std::variant<CreateTable*, Insert*, Delete*, Update*, Select*> query;
     public:
-        Query() {
-        }
+        std::variant<CreateTable*, Insert*, Select*> query;
 
-        Query(CreateTable* createTable): query(createTable) {
-        }
-
-        Query(Insert* insert): query(insert) {
-        }
-
-        Query(Select* select): query(select) {
-        }
-
-        Query(Delete* deleteQuery): query(deleteQuery) {
-        }
-
-        Query(Update* update): query(update) {
-        }
-
-
-        Type type() {
-            if (query.index() == 0) {
-                return Type::CREATE;
-            } else if (query.index() == 1) {
-                return Type::INSERT;
-            } else if (query.index() == 2) {
-                return Type::DELETE;
-            } else if (query.index() == 3) {
-                return Type::UPDATE;
-            } else if (query.index() == 4) {
-                return Type::SELECT;
+        int type() {
+            if (std::holds_alternative<CreateTable*>(query)) {
+              return 0;
+            } else if (std::holds_alternative<Insert*>(query)) {
+                return 1;
+            } else if (std::holds_alternative<Select*>(query)) {
+                return 2;
             }
-            return Type::UNKNOWN;
+
+            return -1;
         }
 
-        CreateTable* createTable() {
-            return std::get<CreateTable*>(query);
-        }
+        Query(CreateTable* createTable): query(createTable) {}
 
-        Insert* insert() {
-            return std::get<Insert*>(query);
-        }
+        Query(Insert* insertIntoTable): query(insertIntoTable) {}
 
-        Delete* deleteQuery() {
-            return std::get<Delete*>(query);
-        }
-
-        Select* select() {
-            return std::get<Select*>(query);
-        }
-
-        Update* update() {
-            return std::get<Update*>(query);
-        }
-
-        void debug_print() {
-        }
+        Query(Select* selectFromTable): query(selectFromTable) {}
     };
-
 };
 

@@ -11,10 +11,8 @@
 #include "types.h"
 #include "storage/fileid.h"
 
-struct TuplePos {
-    std::int32_t pageId;   // number of page inside table
-    std::int32_t tupleId;  // number of tuple inside page
-};
+int const PAGE_META_SIZE = 12;
+
 
 class ColumnScheme {
 private:
@@ -152,12 +150,33 @@ public:
             int last = _offsets[_offsets.size() - 1];
             _offsets.push_back(last + scheme->fieldSize(i));
         }
-        
     }
 
-    ~DenseTuple() {
-        delete[] _data;
+    DenseTuple(std::shared_ptr<TableScheme> scheme, std::byte* data) {
+        _scheme = scheme;
+        _data = data;
+        _offsets.push_back(0);
+
+        for (int i = 0; i < scheme->columnsCount() - 1; ++i) {
+            int last = _offsets[_offsets.size() - 1];
+            _offsets.push_back(last + scheme->fieldSize(i));
+        }
     }
+
+    // throws errors
+    //    ~DenseTuple() {
+    //        delete[] _data;
+    //    }
+
+    std::byte* getData() {
+       return _data;
+    }
+
+
+    std::shared_ptr<TableScheme> getScheme() {
+        return _scheme;
+    }
+
 
     void setInt(int fieldPos, std::int32_t value) {
         ::memcpy(_data + _offsets[fieldPos], &value, 4);
@@ -170,7 +189,6 @@ public:
         return result;
     }
 
-
     void setChar(int fieldPos, std::string value) {
         ::memcpy(_data + _offsets[fieldPos], value.c_str(), value.size());
     }
@@ -180,10 +198,48 @@ public:
         for (int i = 0; i < _scheme->fieldSize(fieldPos); ++i) {
             result.push_back(static_cast<char>(_data[_offsets[fieldPos] + i]));
         }
+        result.erase(std::find(result.begin(), result.end(), '\0'), result.end());
 
         return result;
     }
 
+    void setBool(int fieldPos, bool value) {
+        ::memcpy(_data +_offsets[fieldPos], &value, 1);
+    }
+
+    bool getBool(int fieldPos) {
+        bool result;
+        ::memcpy(&result, _data + _offsets[fieldPos], 1);
+
+        return result;
+    }
+
+    void setLong(int fieldPos, long value) {
+        ::memcpy(_data + _offsets[fieldPos], &value, 8);
+    }
+
+    long getLong(int fieldPos) {
+        long result;
+        ::memcpy(&result, _data + _offsets[fieldPos], 8);
+
+        return result;
+    }
+
+    int getTotalSize() {
+        return _scheme.get()->totalSize();
+    }
+
+    void setDouble(int fieldPos, double value) {
+        ::memcpy(_data + _offsets[fieldPos], &value, 8);
+    }
+
+    double getDouble(int fieldPos) {
+        double result;
+
+        ::memcpy(&result, _data + _offsets[fieldPos], 8);
+
+        return result;
+    }
 };
 
 /*
@@ -203,22 +259,38 @@ public:
  * use remaining[0] up to remaining[9] to address these bytes
  */
 struct TableMeta {
-    std::int32_t size;
-
-    std::int32_t metaSize;
-    std::int32_t nPages;
-    std::int32_t nTuples;
-
-    std::byte remaining[0];
+//    std::int32_t size;
+//
+//    std::int32_t metaSize;
+//    std::int32_t nPages;
+//    std::int32_t nTuples;
+//
+//    std::byte remaining[0];
+      std::int32_t fileId;
+      std::int32_t firstPageId;
+      std::int32_t lastPageId;
+      char title[8];
 };
 
+// Every page consists of these parts:
+// 1) constant-sized header
+// 2) pointers (4 bytes of record size, 4 bytes of record offset)
+// 3) free space
+// 4) data
+// pointerLeft points to pointers section end
+// pointerRight points to data section start
+
 struct PageMeta {
-    int size;
+//    int size;
+//
+//    std::int32_t metaSize;
+//    std::int32_t nTuples;
 
-    std::int32_t metaSize;
-    std::int32_t nTuples;
+    std::int32_t pointerLeft;
+    std::int32_t pointerRight;
+    std::int32_t tuplesCount;
 
-    std::byte remaining[0];
+    // std::byte remaining[0];
 };
 
 struct TupleMeta {

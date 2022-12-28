@@ -1,5 +1,5 @@
 
-add_library(common common.cc)
+add_library(common common.h common.cc)
 
 target_compile_features(common PRIVATE cxx_std_20)
 
