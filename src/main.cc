@@ -97,7 +97,6 @@ int prompt(const char* location) {
         }
 
         if (strcmp(input, "exit\n") == 0) {
-            commit(pageCachePtr);
             exit(0);
         }
 
@@ -142,7 +141,6 @@ int prompt(const char* location) {
                     TableScheme tableScheme = TableScheme(ptr);
                     std::shared_ptr<TableScheme> tableSchemePtr = std::make_shared<TableScheme>(tableScheme);
 
-
                     auto tablePtr = create_table(pageCachePtr, FileId{2}, tableSchemePtr, tableName);
                     break;
                 }
@@ -155,9 +153,6 @@ int prompt(const char* location) {
 
 
                     auto allTables = get_tables(pageCachePtr);
-                    for (const auto & [key, value] : allTables) {
-                        pretty_print_table_scheme(value);
-                    }
                     if (allTables.find(tableName) == allTables.end()) {
                         std::cout << "ERROR: table with name " << tableName << " does not exist";
                         exit(EXIT_FAILURE);
@@ -178,7 +173,7 @@ int prompt(const char* location) {
                             denseTuple.setChar(i, values.at(i)->value);
                         } else if (tableScheme.typeName(i) == "BOOLEAN") {
                             denseTuple.setBool(i, values.at(i)->value == "TRUE");
-                        } else if (tableScheme.typeName(i) == "DOBULE") {
+                        } else if (tableScheme.typeName(i) == "DOUBLE") {
                             denseTuple.setDouble(i, std::stod(values.at(i)->value));
                         } else {
                             std::cout << "unknown type" << std::endl;
@@ -193,10 +188,10 @@ int prompt(const char* location) {
                     PageId FAKE_PAGE_ID = {{2}, 0}; // mock
 
                     auto query = get<query::Select*>(ret->query);
-                    auto expressions = query->getExpressions();
                     auto tableName = query->table_name;
 
                     auto allTables = get_tables(pageCachePtr);
+                    query->printProps();
 
                     if (allTables.find(tableName) == allTables.end()) {
                         std::cout << "ERROR: table with name " << tableName << " does not exist";
@@ -205,11 +200,8 @@ int prompt(const char* location) {
                     auto tableScheme = allTables.at(tableName);
                     std::shared_ptr<TableScheme> tableSchemePtr = std::make_shared<TableScheme>(tableScheme);
 
-                    auto tuples = select_all(pageCachePtr, tableSchemePtr, FAKE_PAGE_ID);
-                    for (int i = 0; i < tuples.size(); i++) {
-                        auto tuple = tuples.at(i);
-                        pretty_print_tuple(std::make_shared<DenseTuple>(tuple));
-                    }
+                    auto tuplesRepr = select(pageCachePtr, tableSchemePtr, FAKE_PAGE_ID, query->getWhereExpression());
+                    pretty_print_relation(tuplesRepr);
                     break;
                 }
                 default: {

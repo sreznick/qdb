@@ -1,5 +1,5 @@
 
-add_library(qengine qengine.cc)
+add_library(qengine qengine.cc filter.cc filter.h)
 
 target_compile_features(qengine PRIVATE cxx_std_20)
 

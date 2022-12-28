@@ -27,12 +27,9 @@ std::shared_ptr<Table> create_table(std::shared_ptr<PageCache> pageCachePtr,
     // Insert record into oracle table
     std::byte* page = pageCache->read_page(ORACLE_TABLE_PAGE_ID);
     PageMeta* pageMeta = read_page_meta(page);
-    // print_page_meta(*pageMeta);
 
     std::shared_ptr<TableScheme> oracleSchemePtr = get_columns_table_scheme();
     auto columnsTableScheme = oracleSchemePtr.get();
-    std::cout << "count: " << tableScheme->columnsCount() << std::endl;
-
 
     for (int i = 0; i < tableScheme->columnsCount(); i++) {
         int size = 0;
@@ -133,11 +130,17 @@ std::vector<DenseTuple> select_all(std::shared_ptr<PageCache> pageCachePtr, std:
      return denseTuples;
 }
 
-std::vector<DenseTuple> select(
-        std::shared_ptr<Storage> pageCachePtr,
+std::shared_ptr<DenseTuplesRepr> select(
+        std::shared_ptr<PageCache> pageCachePtr,
         std::shared_ptr<TableScheme> tableSchemePtr,
         PageId pageId,
-        datatypes::Expression* exps) {
+        datatypes::Expression* whereExpr) {
 
-    return std::vector <DenseTuple>{};
+    auto tuples = select_all(pageCachePtr, tableSchemePtr, pageId);
+    std::vector<DenseTuple> filteredTuples = *filter_tuples(whereExpr, tuples).get();
+
+    auto tuplesRepr = DenseTuplesRepr(filteredTuples, tableSchemePtr);
+    auto tuplesReprPtr = std::make_shared<DenseTuplesRepr>(tuplesRepr);
+    return tuplesReprPtr;
 }
+

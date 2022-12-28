@@ -1,11 +1,8 @@
 #include "table/table.h"
 
+#define BOOL_STR(b) ((b)?"TRUE":"FALSE")
 
-#define BOOL_STR(b) ((b)?"true":"false")
-
-
-void pretty_print_tuple(std::shared_ptr<DenseTuple> denseTuplePtr) {
-    auto tuple = denseTuplePtr.get();
+void pretty_print_tuple(DenseTuple* tuple) {
     auto scheme = tuple->getScheme();
 
     for (int i = 0; i < scheme->columnsCount(); i++) {
@@ -25,6 +22,17 @@ void pretty_print_tuple(std::shared_ptr<DenseTuple> denseTuplePtr) {
     }
 
     std::cout << std::endl;
+}
+
+void pretty_print_relation(std::shared_ptr<DenseTuplesRepr> denseTuplesReprPtr) {
+    auto tuplesWrapper = denseTuplesReprPtr.get();
+
+    std::cout << "RELATION: tuples: " << tuplesWrapper->tuples().size() << " , columns: " << tuplesWrapper->visible_count() << std::endl;
+    std::cout << "----" << std::endl;
+    for (int i = 0; i < tuplesWrapper->tuples().size(); i++) {
+        pretty_print_tuple(&tuplesWrapper->tuples().at(i));
+    }
+    std::cout << "----" << std::endl;
 }
 
 void pretty_print_table_scheme(TableScheme tableScheme) {

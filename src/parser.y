@@ -38,7 +38,11 @@
 %token OP_NOTEQ
 %token OP_OR
 %token OP_AND
-%token OP_ASSIGN
+
+%token OP_GT
+%token OP_GTE
+%token OP_LS
+%token OP_LSE
 
 
 %left OP_EQ OP_NOTEQ
@@ -230,7 +234,7 @@ logical_expr
         $$ = $2;
     }
     | expr OP_EQ expr {
-        $$ = new datatypes::Expression($1, $3, new std::string("=="));
+        $$ = new datatypes::Expression($1, $3, new std::string("="));
     }
     | expr OP_NOTEQ expr {
         $$ = new datatypes::Expression($1, $3, new std::string("!="));
@@ -243,6 +247,18 @@ logical_expr
     }
     | OP_NOT logical_expr {
         $$ = new datatypes::Expression($2, new std::string("OR"));
+    }
+    | expr OP_GT expr {
+        $$ = new datatypes::Expression($1, $3, new std::string(">"));
+    }
+    | expr OP_LS expr {
+        $$ = new datatypes::Expression($1, $3, new std::string("<"));
+    }
+    | expr OP_GTE expr {
+        $$ = new datatypes::Expression($1, $3, new std::string(">="));
+    }
+    | expr OP_LSE expr {
+        $$ = new datatypes::Expression($1, $3, new std::string("<="));
     }
 ;
 

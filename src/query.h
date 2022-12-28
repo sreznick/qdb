@@ -77,6 +77,10 @@ namespace query {
         std::vector<datatypes::Expression*> getExpressions() {
             return expressions;
         }
+
+        datatypes::Expression* getWhereExpression() {
+            return whereExpr;
+        }
     };
 
     class Query {

@@ -47,9 +47,12 @@ DT_REAL (?i:REAL)
 (?i:TRUE)    { return KW_TRUE; }
 (?i:FALSE)   { return KW_FALSE; }
 (?i:NOT)     { return OP_NOT; }
-"=="         { return OP_EQ; }
+"="          { return OP_EQ; }
+">"          { return OP_GT; }
+"<"          { return OP_LS; }
+">="         { return OP_GTE; }
+"<="         { return OP_LSE; }
 "!="         { return OP_NOTEQ; }
-"="          { return OP_ASSIGN; }
 (?i:OR)      { return OP_OR; }
 (?i:AND)     { return OP_AND; }
 

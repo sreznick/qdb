@@ -105,6 +105,10 @@ public:
         return _columns->size();
     }
 
+    int position(std::string name) {
+        return _pos_by_name.find(name)->second;
+    }
+
     ColumnScheme column(std::string name) {
         return (*_columns)[_pos_by_name.find(name)->second];
     }
@@ -301,3 +305,38 @@ struct TupleMeta {
     std::byte remaining[0];
 };
 
+class DenseTuplesRepr {
+    static const int MAX_COLUMNS = 50;
+private:
+    std::shared_ptr<TableScheme> _tableSchemePtr;
+    std::vector<DenseTuple> _tuples;
+    bool _visible[MAX_COLUMNS];
+public:
+    DenseTuplesRepr(std::vector<DenseTuple> tuples, std::shared_ptr<TableScheme> tableSchemePtr):
+    _tuples(tuples),
+    _tableSchemePtr(tableSchemePtr) {
+        for (int i = 0; i < MAX_COLUMNS; i++) _visible[i] = true;
+    }
+
+    std::vector<DenseTuple> tuples() {
+        return _tuples;
+    }
+
+    int visible_count() {
+        int counter = 0;
+        for (int i = 0; i < _tableSchemePtr.get()->columnsCount(); i++) {
+            if (_visible[i]) counter += 1;
+        }
+
+        return counter;
+    }
+
+    bool is_visible(int i) {
+        if (i >= MAX_COLUMNS || i < 0) {
+            std::cout << "Invalid value" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+
+        return _visible[i];
+    }
+};

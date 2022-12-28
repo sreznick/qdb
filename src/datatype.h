@@ -1,6 +1,9 @@
 #include <string>
 #include <iostream>
 
+#ifndef SRC_DATATYPES_H
+#define SRC_DATATYPES_H
+
 namespace datatypes {
     class Datatype {
     public:
@@ -66,3 +69,4 @@ namespace datatypes {
         Assignment(std::string identifier, datatypes::Expression* expression): identifier(identifier), expression(expression) {}
     };
 };
+#endif /* src/datatypes.h */
