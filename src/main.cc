@@ -30,6 +30,7 @@ int main(int argc, const char *argv[]) {
         std::cout << "command: initdb" << std::endl;
         return initdb(argv[2]);
     } else if (strcmp(command, "prompt") == 0) {
+        initdb(argv[2]);
         return prompt(argv[2]);
     } else {
         std::cerr << "unknown command" << std::endl;

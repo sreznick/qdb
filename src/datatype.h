@@ -52,8 +52,8 @@ namespace datatypes {
     public:
         std::string* operation;
         ExpressionValue* value;
-        Expression* left;
-        Expression* right;
+        Expression* left = nullptr;
+        Expression* right = nullptr;
 
         Expression(Expression* left, Expression* right, std::string* operation): left(left), right(right), operation(operation) {}
         Expression(Expression* left, std::string* operation): left(left), operation(operation) {}

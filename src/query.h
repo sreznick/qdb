@@ -55,7 +55,7 @@ namespace query {
 
     class Select : public BaseQuery {
         std::vector<datatypes::Expression*> expressions;
-        datatypes::Expression* whereExpr;
+        datatypes::Expression* whereExpr = nullptr;
 
     public:
         Select(std::string tn, std::vector<datatypes::Expression*> expressions) : BaseQuery("SELECT", tn), expressions(expressions) {}

@@ -200,7 +200,15 @@ insertion_values
 ;
 
 expr_list
-    : expr {
+    : TIMES {
+        std::vector<datatypes::Expression*>* values = new std::vector<datatypes::Expression*>;
+        datatypes::ExpressionValue* expressionValue = new datatypes::ExpressionValue("*", std::string("UNKNOWN"));
+        datatypes::Expression* value = new datatypes::Expression(expressionValue, new std::string("variable"));
+        values->push_back(value);
+
+        $$ = values;
+    }
+    | expr {
         std::vector<datatypes::Expression*>* values = new std::vector<datatypes::Expression*>;
         values->push_back($1);
 
@@ -209,13 +217,6 @@ expr_list
     | expr_list COMMA expr {
         std::vector<datatypes::Expression*>* values = $1;
         values->push_back($3);
-
-        $$ = values;
-    }
-    | TIMES {
-        std::vector<datatypes::Expression*>* values = new std::vector<datatypes::Expression*>;
-        datatypes::Expression* timesValue = new datatypes::Expression(new std::string("*"));
-        values->push_back(timesValue);
 
         $$ = values;
     }
