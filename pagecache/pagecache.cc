@@ -50,6 +50,13 @@ std::byte* PageCache::read_page(PageId pageId) {
         access_counters[it->second] = std::min(access_counters[it->second] + 1, config.countLimit);
         return cache[it->second];
     }
+    if (this->next_free_slot != this->config.pageCount) {
+        auto position = this->next_free_slot;
+        this->next_free_slot++;
+        insert_page_into(pageId, position);
+        storage.read(cache[position], pageId);
+        return cache[position];
+    }
     PageId victim = find_victim();
     int position = page2index[victim];
     remove_page(victim);
@@ -63,8 +70,9 @@ PageId PageCache::create_page(FileId fileId) {
     if (pageId.id < 0) {
         return PageId {0, -1};
     }
-    auto data = static_cast<std::byte>(0);
-    storage.write(&data, pageId);
+    std::byte data[DEFAULT_PAGE_SIZE];
+    std::fill(data, data + DEFAULT_PAGE_SIZE, static_cast<std::byte>(0));
+    storage.write(data, pageId);
     if (next_free_slot == config.pageCount) {
         PageId victim = find_victim();
         int position = page2index[victim];

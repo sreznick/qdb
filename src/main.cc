@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include "storage/storage.h"
 #include "pagecache/pagecache.h"
+#include "pagecache/index.h"
 
 #include "query.h"
 #include "lexer.h"
 #include "parser.h"
+
 
 int main(int argc, const char *argv[]) {
     if (argc == 1) {
@@ -29,6 +31,16 @@ int main(int argc, const char *argv[]) {
     std::cout << storage.is_present() << std::endl;
 
     PageCache page {storage, {5, 16384}};
+
+    auto btree = BTree<int>(page, 3);
+
+    for (int i = 0; i < 30; i++) {
+        btree.insert_key(i);
+    }
+    for (int i = 0; i < 30; i++) {
+        std::cerr << std::endl << btree.has_key(i) << std::endl;
+    }
+
 
     while (1) {
         printf("sql>");
