@@ -7,8 +7,11 @@
 #include "filter.h"
 
 
-const FileId ORACLE_TABLE_FILE_ID = FileId{1};
-const PageId ORACLE_TABLE_PAGE_ID = PageId{ORACLE_TABLE_FILE_ID, 0};
+const FileId CATALOG_COLUMNS_FILE_ID = FileId{1};
+const PageId CATALOG_COLUMNS_PAGE_ID = PageId{CATALOG_COLUMNS_FILE_ID, 0};
+
+const FileId CATALOG_TABLES_FILE_ID = FileId{2};
+const PageId CATALOG_TABLES_PAGE_ID = PageId{CATALOG_TABLES_FILE_ID, 0};
 
 std::shared_ptr<Table> get_table_ptr(std::shared_ptr<TableScheme> tableScheme);
 std::shared_ptr<Table> create_table(std::shared_ptr<PageCache> pageCache,
@@ -23,15 +26,17 @@ void insert_tuple(std::shared_ptr<PageCache> pageCache,
 
 std::vector<DenseTuple> select_all(std::shared_ptr<PageCache> pageCache,
                                    std::shared_ptr<TableScheme>,
-                                           PageId pageId);
+                                           FileId fileId, int lastPageId);
 
 std::shared_ptr<DenseTuplesRepr> select(
         std::shared_ptr<PageCache> pageCache,
         std::shared_ptr<TableScheme>,
-        PageId pageId,
+        FileId fileId,
+        int lastPageId,
         datatypes::Expression*);
 void init_db(std::shared_ptr<PageCache> pageCachePtr);
+FileId next_file_id(std::shared_ptr<PageCache> pageCachePtr);
 
-std::map<std::string, TableScheme> get_tables(std::shared_ptr<PageCache> pageCachePtr);
+std::map<std::string, Table> get_tables(std::shared_ptr<PageCache> pageCachePtr);
 
 bool check_predicate(datatypes::Expression* expression, DenseTuple tuple);

@@ -261,6 +261,10 @@ logical_expr
     | expr OP_LSE expr {
         $$ = new datatypes::Expression($1, $3, new std::string("<="));
     }
+    | IDENTIFIER {
+        datatypes::ExpressionValue* expressionValue = new datatypes::ExpressionValue(*$1, std::string("UNKNOWN"));
+        $$ = new datatypes::Expression(expressionValue, new std::string("variable"));
+    }
 ;
 
 expr

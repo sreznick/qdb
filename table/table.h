@@ -123,11 +123,13 @@ private:
     std::string _name;
     std::shared_ptr<TableScheme> _tableScheme;
     FileId _fileId;
+    int _lastPageId;
 
 public:
     Table(std::string name,
           std::shared_ptr<TableScheme> tableScheme,
-          FileId fileId): _name(name), _tableScheme(tableScheme), _fileId(fileId) {
+          FileId fileId,
+          int lastPageId): _name(name), _tableScheme(tableScheme), _fileId(fileId), _lastPageId(lastPageId) {
     }
 
     std::shared_ptr<TableScheme> scheme() {
@@ -136,6 +138,14 @@ public:
 
     FileId fileId() {
         return _fileId;
+    }
+
+    std::string name() {
+        return _name;
+    }
+
+    PageId lastPageId() const {
+        return PageId{{_fileId}, _lastPageId};
     }
 };
 
@@ -263,17 +273,9 @@ public:
  * use remaining[0] up to remaining[9] to address these bytes
  */
 struct TableMeta {
-//    std::int32_t size;
-//
-//    std::int32_t metaSize;
-//    std::int32_t nPages;
-//    std::int32_t nTuples;
-//
-//    std::byte remaining[0];
       std::int32_t fileId;
-      std::int32_t firstPageId;
       std::int32_t lastPageId;
-      char title[8];
+      char name[16];
 };
 
 // Every page consists of these parts:
@@ -285,16 +287,9 @@ struct TableMeta {
 // pointerRight points to data section start
 
 struct PageMeta {
-//    int size;
-//
-//    std::int32_t metaSize;
-//    std::int32_t nTuples;
-
     std::int32_t pointerLeft;
     std::int32_t pointerRight;
     std::int32_t tuplesCount;
-
-    // std::byte remaining[0];
 };
 
 struct TupleMeta {

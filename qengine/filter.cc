@@ -14,6 +14,13 @@
 // ... WHERE bool_field
 // and so on. Also, no checks for types are performed
 
+bool case_insensitive_match(std::string s1, std::string s2) {
+    transform(s1.begin(), s1.end(), s1.begin(), ::toupper);
+    transform(s2.begin(), s2.end(), s2.begin(), ::toupper);
+
+    return (s1.compare(s2) == 0);
+}
+
 std::shared_ptr<std::vector<DenseTuple>> filter_tuples(
         datatypes::Expression* expression,
         std::vector<DenseTuple> tuples
@@ -33,7 +40,7 @@ std::shared_ptr<std::vector<DenseTuple>> filter_tuples(
     return std::make_shared<std::vector<DenseTuple>>(out);
 }
 
-int resolve_value(datatypes::ExpressionValue* value, DenseTuple tuple) {
+int resolve_int_value(datatypes::ExpressionValue* value, DenseTuple tuple) {
     if (value->type == "INT") {
         return std::atoi(value->value.c_str());
     } else {
@@ -43,12 +50,31 @@ int resolve_value(datatypes::ExpressionValue* value, DenseTuple tuple) {
     }
 }
 
+bool resolve_boolean_value(datatypes::ExpressionValue* value, DenseTuple tuple) {
+    auto scheme = tuple.getScheme().get();
+    int pos = scheme->position(value->value);
+    return tuple.getBool(pos);
+}
+
 
 bool check_predicate(datatypes::Expression* expression, DenseTuple tuple) {
     if (expression == nullptr) return true;
 
-    int left = resolve_value(expression->left->value, tuple);
-    int right = resolve_value(expression->right->value, tuple);
+    if (*expression->operation == std::string("const")) {
+        if (expression->value->type != "BOOLEAN") {
+            std::cout << "value should be BOOLEAN" << std::endl;
+            exit(EXIT_FAILURE);
+        }
+        return case_insensitive_match(expression->value->value, "TRUE");
+    }
+
+    if (*expression->operation == std::string("variable")) {
+        return resolve_boolean_value(expression->value, tuple);
+    }
+
+    int left = resolve_int_value(expression->left->value, tuple);
+    int right = resolve_int_value(expression->right->value, tuple);
+
 
     if (*expression->operation == std::string("=")) {
         return left == right;
@@ -60,10 +86,6 @@ bool check_predicate(datatypes::Expression* expression, DenseTuple tuple) {
         return left < right;
     } else if (*expression->operation == std::string("<=")) {
         return left <= right;
-    }
-
-    if (expression->value->type == "BOOLEAN") {
-        return expression->value->value == "TRUE";
     }
 
 

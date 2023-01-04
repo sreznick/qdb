@@ -8,6 +8,13 @@
 #include <parsing_utils.h>
 
 namespace query {
+    enum QueryType {
+        UNKNOWN,
+        CREATE,
+        INSERT,
+        SELECT
+    };
+
     class BaseQuery {
     public:
         std::string query_type;
@@ -87,16 +94,16 @@ namespace query {
     public:
         std::variant<CreateTable*, Insert*, Select*> query;
 
-        int type() {
+        QueryType type() {
             if (std::holds_alternative<CreateTable*>(query)) {
-              return 0;
+              return QueryType::CREATE;
             } else if (std::holds_alternative<Insert*>(query)) {
-                return 1;
+                return QueryType::INSERT;
             } else if (std::holds_alternative<Select*>(query)) {
-                return 2;
+                return QueryType::SELECT;
             }
 
-            return -1;
+            return QueryType::UNKNOWN;
         }
 
         Query(CreateTable* createTable): query(createTable) {}

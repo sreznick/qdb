@@ -50,7 +50,7 @@ namespace datatypes {
 
     class Expression {
     public:
-        std::string* operation;
+        std::string* operation = nullptr;
         ExpressionValue* value;
         Expression* left = nullptr;
         Expression* right = nullptr;
