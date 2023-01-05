@@ -4,12 +4,6 @@
 #include "table/types.h"
 #include "src/datatype.h"
 
-std::shared_ptr<Table> get_table_ptr(std::shared_ptr<TableScheme> tableScheme) {
-    auto table = Table{"users", tableScheme, FileId{2}, 0, 0, 0};
-
-    return std::make_shared<Table>(table);
-}
-
 void init_db(std::shared_ptr<PageCache> pageCachePtr) {
     create_columns_table(pageCachePtr);
     create_tables_table(pageCachePtr);
@@ -81,8 +75,27 @@ void insert_tuple(std::shared_ptr<PageCache> pageCachePtr,
                   std::shared_ptr<DenseTuple> data,
                   PageId pageId) {
 
-    insert_table_tuple(pageCachePtr, pageId, data);
+    int offset = insert_table_tuple(pageCachePtr, pageId, data);
+    if (table.get()->has_index()) { update_index(pageCachePtr, table, data, pageId, offset); }
     pageCachePtr.get()->sync();
+}
+
+void update_index(std::shared_ptr<PageCache> pageCachePtr,
+                  std::shared_ptr<Table> tablePtr,
+                  std::shared_ptr<DenseTuple> data,
+                  PageId pageId,
+                  int offset) {
+    auto pageCache = pageCachePtr.get();
+    auto table = tablePtr.get();
+    auto tuple = data.get();
+
+    auto metaPage = pageCache->read_page({{table->indexFileId()}, 0});
+    auto rootPage = pageCache->read_page({{table->indexFileId()}, 1});
+
+    auto btree = BTree(metaPage, rootPage, pageCachePtr, table->indexFileId());
+    btree.insert({tuple->getInt(table->indexFieldPos()), offset});
+    pageCache->write({{table->indexFileId()}, 0}, metaPage);
+    pageCache->write({{table->indexFileId()}, 1}, rootPage);
 }
 
 std::map<std::string, Table> get_tables(std::shared_ptr<PageCache> pageCachePtr) {

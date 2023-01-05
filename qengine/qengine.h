@@ -26,6 +26,12 @@ void insert_tuple(std::shared_ptr<PageCache> pageCache,
                   std::shared_ptr<DenseTuple> data,
                   PageId pageId);
 
+void update_index(std::shared_ptr<PageCache> pageCachePtr,
+                  std::shared_ptr<Table> table,
+                  std::shared_ptr<DenseTuple> data,
+                  PageId pageId,
+                  int offset);
+
 std::vector<DenseTuple> select_all(std::shared_ptr<PageCache> pageCache,
                                    std::shared_ptr<TableScheme>,
                                            FileId fileId, int lastPageId);

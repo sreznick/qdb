@@ -167,7 +167,7 @@ PageId allocate_new_page(std::shared_ptr<PageCache> pageCachePtr, FileId fileId)
 }
 
 
-void insert_table_tuple(std::shared_ptr<PageCache> pageCachePtr, PageId pageId, std::shared_ptr<DenseTuple> denseTuplePtr) {
+int insert_table_tuple(std::shared_ptr<PageCache> pageCachePtr, PageId pageId, std::shared_ptr<DenseTuple> denseTuplePtr) {
     PageCache* pageCache = pageCachePtr.get();
     DenseTuple* tuple = denseTuplePtr.get();
 
@@ -177,18 +177,17 @@ void insert_table_tuple(std::shared_ptr<PageCache> pageCachePtr, PageId pageId, 
     std::int32_t tupleLength = tuple->getTotalSize();
     std::int32_t tupleOffset = pageMeta->pointerRight - tupleLength;
 
-    // FIXME: Remove magic number
     if (pageMeta->pointerRight - pageMeta->pointerLeft < tupleLength + 8) {
         auto newPageId = allocate_new_page(pageCachePtr, pageId.fileId);
         return insert_table_tuple(pageCachePtr, newPageId, denseTuplePtr);
-   }
+    }
 
     memcpy(page + pageMeta->pointerLeft, &tupleLength, sizeof tupleLength);
     memcpy(page + pageMeta->pointerLeft + sizeof tupleLength, &tupleOffset, sizeof tupleOffset);
     memcpy(page + pageMeta->pointerRight - tupleLength, tuple->getData(), tupleLength);
 
     pageMeta->pointerLeft += 8;
-    pageMeta->pointerRight -= tuple->getTotalSize();
+    pageMeta->pointerRight -= tupleLength;
     pageMeta->tuplesCount += 1;
 
     write_page_meta(page, *pageMeta);
@@ -197,5 +196,7 @@ void insert_table_tuple(std::shared_ptr<PageCache> pageCachePtr, PageId pageId, 
         std::cout << "ERROR: pageCache#write failed" << std::endl;
         exit(EXIT_FAILURE);
     }
+
+    return pageMeta->pointerRight;
 }
 

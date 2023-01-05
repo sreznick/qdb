@@ -155,13 +155,16 @@ int prompt(const char* location) {
                         std::cout << "ERROR: table with name " << tableName << " does not exist";
                         exit(EXIT_FAILURE);
                     }
+
+                    if (allTables.find(tableName) == allTables.end()) {
+                        std::cout << "ERROR: table with name " << tableName << " does not exist";
+                        exit(EXIT_FAILURE);
+                    }
                     auto table = allTables.at(tableName);
+                    auto tablePtr = std::make_shared<Table>(table);
                     auto tableSchemePtr = table.scheme();
                     auto tableScheme = tableSchemePtr.get();
 
-
-                    // FIXME
-                    auto tablePtr = get_table_ptr(tableSchemePtr);
 
                     DenseTuple denseTuple = DenseTuple(tableSchemePtr);
 
@@ -189,14 +192,12 @@ int prompt(const char* location) {
                     auto tableName = query->table_name;
 
                     auto allTables = get_tables(pageCachePtr);
-                    // query->printProps();
 
                     if (allTables.find(tableName) == allTables.end()) {
                         std::cout << "ERROR: table with name " << tableName << " does not exist";
                         exit(EXIT_FAILURE);
                     }
                     auto table = allTables.at(tableName);
-                    auto tableSchemePtr = table.scheme();
 
                     auto tuplesRepr = select(pageCachePtr, table, query->getWhereExpression());
                     pretty_print_relation(tuplesRepr);

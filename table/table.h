@@ -162,6 +162,14 @@ public:
         return FileId{_indexFileId};
     }
 
+    int indexFieldPos() const {
+        return _indexFieldPos;
+    }
+
+    bool has_index() {
+        return _indexFileId > 0;
+    }
+
 };
 
 class DenseTuple {
