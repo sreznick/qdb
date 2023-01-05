@@ -8,12 +8,6 @@ void commit(std::shared_ptr<PageCache> pageCachePtr) {
     pageCachePtr.get()->sync();
 }
 
-std::shared_ptr<Table> get_table_ptr(std::shared_ptr<TableScheme> tableScheme) {
-    auto table = Table{"users", tableScheme, FileId{2}, 0};
-
-    return std::make_shared<Table>(table);
-}
-
 void init_db(std::shared_ptr<PageCache> pageCachePtr) {
     create_columns_table(pageCachePtr);
     create_tables_table(pageCachePtr);

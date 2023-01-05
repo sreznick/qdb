@@ -158,11 +158,15 @@ int prompt(const char* location) {
                         exit(EXIT_FAILURE);
                     }
                     auto table = allTables.at(tableName);
+                    auto tablePtr = std::make_shared<Table>(table);
                     auto tableSchemePtr = table.scheme();
                     auto tableScheme = tableSchemePtr.get();
 
 
-                    auto tablePtr = get_table_ptr(tableSchemePtr);
+                    if (allTables.find(tableName) == allTables.end()) {
+                        std::cout << "ERROR: table with name " << tableName << " does not exist";
+                        exit(EXIT_FAILURE);
+                    }
 
                     DenseTuple denseTuple = DenseTuple(tableSchemePtr);
 

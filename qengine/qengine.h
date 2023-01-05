@@ -13,7 +13,6 @@ const PageId CATALOG_COLUMNS_PAGE_ID = PageId{CATALOG_COLUMNS_FILE_ID, 0};
 const FileId CATALOG_TABLES_FILE_ID = FileId{2};
 const PageId CATALOG_TABLES_PAGE_ID = PageId{CATALOG_TABLES_FILE_ID, 0};
 
-std::shared_ptr<Table> get_table_ptr(std::shared_ptr<TableScheme> tableScheme);
 std::shared_ptr<Table> create_table(std::shared_ptr<PageCache> pageCache,
                                     FileId fileId,
                                     std::shared_ptr<TableScheme> tableScheme,
