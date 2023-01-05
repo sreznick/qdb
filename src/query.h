@@ -10,9 +10,10 @@
 namespace query {
     enum QueryType {
         UNKNOWN,
-        CREATE,
+        CREATE_TABLE,
         INSERT,
-        SELECT
+        SELECT,
+        CREATE_INDEX
     };
 
     class BaseQuery {
@@ -67,6 +68,7 @@ namespace query {
     public:
         Select(std::string tn, std::vector<datatypes::Expression*> expressions) : BaseQuery("SELECT", tn), expressions(expressions) {}
         Select(std::string tn, std::vector<datatypes::Expression*> expressions, datatypes::Expression* whereExpr) : BaseQuery("SELECT", tn), expressions(expressions), whereExpr(whereExpr) {}
+
         void printProps() {
             for (datatypes::Expression* expression : expressions) {
                 std::cout << "\nSelect expression:\n";
@@ -86,21 +88,35 @@ namespace query {
         }
 
         datatypes::Expression* getWhereExpression() {
+            if (whereExpr == NULL) return nullptr;
+
             return whereExpr;
+        }
+    };
+
+    class CreateIndex : public BaseQuery {
+        std::vector<datatypes::Column*> _columns;
+    public:
+        CreateIndex(std::string tableName, std::vector<datatypes::Column*> columns): BaseQuery("CREATE_INDEX", tableName), _columns(columns) {}
+
+        std::vector<datatypes::Column*> columns() {
+            return _columns;
         }
     };
 
     class Query {
     public:
-        std::variant<CreateTable*, Insert*, Select*> query;
+        std::variant<CreateTable*, Insert*, Select*, CreateIndex*> query;
 
         QueryType type() {
             if (std::holds_alternative<CreateTable*>(query)) {
-              return QueryType::CREATE;
+              return QueryType::CREATE_TABLE;
             } else if (std::holds_alternative<Insert*>(query)) {
                 return QueryType::INSERT;
             } else if (std::holds_alternative<Select*>(query)) {
                 return QueryType::SELECT;
+            } else if (std::holds_alternative<CreateIndex*>(query)) {
+                return QueryType::CREATE_INDEX;
             }
 
             return QueryType::UNKNOWN;
@@ -111,6 +127,8 @@ namespace query {
         Query(Insert* insertIntoTable): query(insertIntoTable) {}
 
         Query(Select* selectFromTable): query(selectFromTable) {}
+
+        Query(CreateIndex* createIndex): query(createIndex) {}
     };
 };
 

@@ -28,7 +28,7 @@ void PageCache::insertPage(PageId pageId, int position) {
     _cachePosition[pageId] = position;
     _pageIdByPosition[position] = pageId;
     _isDirty[pageId] = false;
-    auto data = new std::byte[DEFAULT_PAGE_SIZE];
+    auto data = new std::byte[DEFAULT_PAGE_SIZE]();
     _cache[position] = data;
 }
 
@@ -43,9 +43,6 @@ void PageCache::removePage(PageId pageId) {
 PageId PageCache::create_page(FileId fileId) {
     PageId pageId = _storage.create_page(fileId);
     if (pageId.id < 0) { return PageId{0, -1}; }
-
-    std::byte nullByte = static_cast<std::byte>(0);
-    _storage.write(&nullByte, pageId);
 
     if (capacity == _config.pageCount) {
         PageId victimPageId = find_victim();

@@ -30,6 +30,8 @@
 %token KW_FROM
 %token KW_TABLE
 %token KW_VALUES
+%token KW_INDEX
+%token KW_ON
 
 %token KW_TRUE
 %token KW_FALSE
@@ -78,6 +80,7 @@
 %token <datatype_spec> DT_REAL
 %token <datatype_spec> DT_LONG
 
+%type <query> create_index;
 %type <query> create_table
 %type <query> insert_into_table;
 %type <query> select_from_table;
@@ -88,14 +91,34 @@
 
 %type <datatype_spec> datatype;
 %type <columns> columns;
+%type <columns> untyped_columns;
 %type <literal> literal;
 %type <literals> insertion_values;
 
 %%
 
-start: create_table
+start: create_index
+     | create_table
      | insert_into_table
-     | select_from_table;
+     | select_from_table
+ ;
+
+/*
+  SQL standard denotes the following format:
+  CREATE INDEX [<index-name>] ON <table-name>(<columns...>);
+
+  We implemented the following:
+  CREATE INDEX <table name> ON <column name>
+  according to task description (in fact, many columns may be specified)
+*/
+create_index
+    : KW_CREATE KW_INDEX IDENTIFIER KW_ON LPAREN untyped_columns RPAREN SEMICOLON {
+        query::CreateIndex* createIndex = new query::CreateIndex(*$3, *$6);
+        query::Query* query = new query::Query(createIndex);
+        $$ = query;
+        *ret = query;
+    }
+;
 
 create_table
     : KW_CREATE KW_TABLE IDENTIFIER LPAREN columns RPAREN SEMICOLON {
@@ -149,6 +172,21 @@ datatype
       $$ = $1;
     }
 ;
+
+untyped_columns
+    : IDENTIFIER {
+        datatypes::Column* column = new datatypes::Column(*$1, nullptr);
+        std::vector<datatypes::Column*>* columns = new std::vector<datatypes::Column*>;
+        columns->push_back(column);
+        $$ = columns;
+    }
+    | untyped_columns COMMA IDENTIFIER {
+        std::vector<datatypes::Column*>* values = $1;
+        values->push_back(new datatypes::Column(*$3, nullptr));
+        $$ = values;
+    }
+;
+
 
 columns
     : IDENTIFIER datatype {

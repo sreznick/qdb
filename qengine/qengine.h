@@ -5,6 +5,8 @@
 #include <memory>
 #include "src/datatype.h"
 #include "filter.h"
+#include "btree/btree.h"
+#include "access_method.h"
 
 
 const FileId CATALOG_COLUMNS_FILE_ID = FileId{1};
@@ -30,13 +32,14 @@ std::vector<DenseTuple> select_all(std::shared_ptr<PageCache> pageCache,
 
 std::shared_ptr<DenseTuplesRepr> select(
         std::shared_ptr<PageCache> pageCache,
-        std::shared_ptr<TableScheme>,
-        FileId fileId,
-        int lastPageId,
+        Table table,
         datatypes::Expression*);
 void init_db(std::shared_ptr<PageCache> pageCachePtr);
 FileId next_file_id(std::shared_ptr<PageCache> pageCachePtr);
 
 std::map<std::string, Table> get_tables(std::shared_ptr<PageCache> pageCachePtr);
 
-bool check_predicate(datatypes::Expression* expression, DenseTuple tuple);
+
+std::pair<int, DenseTuple*> find_table_record_offset(std::shared_ptr<PageCache>, Table);
+void initialize_btree(std::shared_ptr<PageCache>, Table, int);
+void populate_btree(std::shared_ptr<PageCache> pageCachePtr, Table table, int fieldPos, std::byte*, std::byte*);

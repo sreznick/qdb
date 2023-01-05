@@ -7,7 +7,7 @@ add_subdirectory(storage)
 add_subdirectory(pagecache)
 add_subdirectory(qengine)
 add_subdirectory(table)
-
+add_subdirectory(btree)
 
 set(SRC_DIR "src")
 set(PARSER_DIR "${CMAKE_CURRENT_BINARY_DIR}")
@@ -24,6 +24,6 @@ add_flex_bison_dependency(LEXER PARSER)
 
 add_executable(qdb "${SRC_DIR}/main.cc" "${LEXER_OUT}" "${PARSER_OUT}")
 target_include_directories(qdb PRIVATE "${PARSER_DIR}" "${SRC_DIR}" "${PROJECT_SOURCE_DIR}/common")
-target_link_libraries(qdb PUBLIC common storage pagecache qengine table)
+target_link_libraries(qdb PUBLIC common storage pagecache qengine table btree)
 target_compile_features(qdb PRIVATE cxx_std_20)
 

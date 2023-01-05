@@ -124,12 +124,22 @@ private:
     std::shared_ptr<TableScheme> _tableScheme;
     FileId _fileId;
     int _lastPageId;
+    int _indexFileId;
+    int _indexFieldPos;
 
 public:
     Table(std::string name,
           std::shared_ptr<TableScheme> tableScheme,
           FileId fileId,
-          int lastPageId): _name(name), _tableScheme(tableScheme), _fileId(fileId), _lastPageId(lastPageId) {
+          int lastPageId,
+          int indexFileId,
+          int indexFieldPos):
+            _name(name),
+            _tableScheme(tableScheme),
+            _fileId(fileId),
+            _lastPageId(lastPageId),
+            _indexFileId(indexFileId),
+            _indexFieldPos(indexFieldPos) {
     }
 
     std::shared_ptr<TableScheme> scheme() {
@@ -147,6 +157,11 @@ public:
     PageId lastPageId() const {
         return PageId{{_fileId}, _lastPageId};
     }
+
+    FileId indexFileId() const {
+        return FileId{_indexFileId};
+    }
+
 };
 
 class DenseTuple {
@@ -275,6 +290,8 @@ public:
 struct TableMeta {
       std::int32_t fileId;
       std::int32_t lastPageId;
+      std::int32_t indexFileId;
+      std::int32_t indexFieldPos;
       char name[16];
 };
 
@@ -294,9 +311,7 @@ struct PageMeta {
 
 struct TupleMeta {
     int size;
-
     std::int32_t metaSize;
-
     std::byte remaining[0];
 };
 

@@ -1,7 +1,3 @@
-//
-// Created by jaroslav on 28/12/22.
-//
-
 #include "src/datatype.h"
 #include "table/table.h"
 

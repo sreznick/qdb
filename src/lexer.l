@@ -43,6 +43,8 @@ DT_REAL (?i:REAL)
 (?i:FROM)    { return KW_FROM; }
 (?i:TABLE)   { return KW_TABLE; }
 (?i:VALUES)  { return KW_VALUES; }
+(?i:INDEX)   { return KW_INDEX; }
+(?i:ON)      { return KW_ON; }
 
 (?i:TRUE)    { return KW_TRUE; }
 (?i:FALSE)   { return KW_FALSE; }

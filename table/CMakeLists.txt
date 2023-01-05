@@ -1,5 +1,5 @@
 
-add_library(table table.cc types.cc)
+add_library(table table.cc types.cc index.h)
 
 target_compile_features(table PRIVATE cxx_std_20)
 

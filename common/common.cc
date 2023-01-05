@@ -2,7 +2,7 @@
 #include "common.h"
 #include "qengine/qengine.h"
 
-
+// FIXME: memoize scheme once
 std::shared_ptr<TableScheme> get_columns_table_scheme() {
     ColumnScheme columnScheme_tableName = ColumnScheme("table_name", TypeTag::CHAR, 16);
     ColumnScheme columnScheme_name = ColumnScheme("name", TypeTag::CHAR, 16);
@@ -22,14 +22,19 @@ std::shared_ptr<TableScheme> get_columns_table_scheme() {
     return std::make_shared<TableScheme>(tableScheme);
 }
 
+// FIXME: memoize scheme once
 std::shared_ptr<TableScheme> get_tables_table_scheme() {
     ColumnScheme columnScheme_fileId = ColumnScheme("file_id", TypeTag::INT);
     ColumnScheme columnScheme_lastPageId = ColumnScheme("last_page_id", TypeTag::INT);
+    ColumnScheme columnScheme_indexFileId = ColumnScheme("index_fid", TypeTag::INT);
+    ColumnScheme columnScheme_indexFieldPos = ColumnScheme("index_fpos", TypeTag::INT);
     ColumnScheme columnScheme_name = ColumnScheme("name", TypeTag::CHAR, 16);
 
     std::vector<ColumnScheme> columnsVector;
     columnsVector.push_back(columnScheme_fileId);
     columnsVector.push_back(columnScheme_lastPageId);
+    columnsVector.push_back(columnScheme_indexFileId);
+    columnsVector.push_back(columnScheme_indexFieldPos);
     columnsVector.push_back(columnScheme_name);
 
     std::shared_ptr<std::vector<ColumnScheme>> ptr = std::make_shared<std::vector<ColumnScheme>>(columnsVector);
@@ -80,6 +85,10 @@ void print_table_meta(TableMeta tableMeta) {
     std::cout << "name: " << tableMeta.name << std::endl;
     std::cout << "file ID: " << tableMeta.fileId << std::endl;
     std::cout << "last page ID: " << tableMeta.lastPageId << std::endl;
+    std::cout << "index page ID: " << tableMeta.indexFileId << std::endl;
+    if (tableMeta.indexFileId > 0) {
+        std::cout << "index fiels pos: " << tableMeta.indexFieldPos << std::endl;
+    }
 }
 
 PageMeta* read_page_meta(std::byte* data) {
@@ -93,14 +102,17 @@ PageMeta* read_page_meta(std::byte* data) {
 }
 
 TableMeta* read_table_meta(std::byte* data) {
-    std::int32_t fileID, lastPageID;
-    char name[16];
+    std::int32_t fileID, lastPageID, indexFileID, indexFieldPos;
+    char* name[16];
 
     ::memcpy(&fileID, data, 4);
     ::memcpy(&lastPageID, data + 4, 4);
-    ::memcpy(&name, data + 8, 16);
+    ::memcpy(&indexFileID, data + 8, 4);
+    ::memcpy(&indexFieldPos, data + 12, 4);
+    ::memcpy(&name, data + 16, 16);
 
-    return new TableMeta{fileID, lastPageID, ""};
+    // FIXME: table_name
+    return new TableMeta{fileID, lastPageID, indexFileID, indexFieldPos, "users"};
 }
 
 void write_page_meta(std::byte* dest, PageMeta pageMeta) {
@@ -112,7 +124,9 @@ void write_page_meta(std::byte* dest, PageMeta pageMeta) {
 void write_table_meta(std::byte* dest, TableMeta tableMeta) {
     memcpy(dest, &tableMeta.fileId, 4);
     memcpy(dest + 4, &tableMeta.lastPageId, 4);
-    memcpy(dest + 8, &tableMeta.name, 16);
+    memcpy(dest + 8, &tableMeta.indexFileId, 4);
+    memcpy(dest + 12, &tableMeta.indexFieldPos, 4);
+    memcpy(dest + 16, &tableMeta.name, 16);
 }
 
 PageId allocate_new_page(std::shared_ptr<PageCache> pageCachePtr, FileId fileId) {
@@ -163,6 +177,7 @@ void insert_table_tuple(std::shared_ptr<PageCache> pageCachePtr, PageId pageId, 
     std::int32_t tupleLength = tuple->getTotalSize();
     std::int32_t tupleOffset = pageMeta->pointerRight - tupleLength;
 
+    // FIXME: Remove magic number
     if (pageMeta->pointerRight - pageMeta->pointerLeft < tupleLength + 8) {
         auto newPageId = allocate_new_page(pageCachePtr, pageId.fileId);
         return insert_table_tuple(pageCachePtr, newPageId, denseTuplePtr);

@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <cstdio>
 #include "storage/storage.h"
 #include "pagecache/pagecache.h"
 #include "table/table.h"
@@ -9,7 +9,6 @@
 #include "parser.h"
 #include "representation.h"
 #include <qengine/qengine.h>
-#include <common/common.h>
 
 int initdb(const char*);
 int prompt(const char*);
@@ -77,12 +76,11 @@ int prompt(const char* location) {
         }
         storage.initialize();
     }
-    std::cout << storage.is_present() << std::endl;
 
     PageCache pageCache{storage, {5, 16384}};
     std::shared_ptr<PageCache> pageCachePtr = std::make_shared<PageCache>(pageCache);
 
-    while (1) {
+    while (true) {
         printf("sql>");
         fflush(stdout);
         fflush(stdin);
@@ -112,7 +110,7 @@ int prompt(const char* location) {
             printf("= %d\n", ret->type());
 
             switch (ret->type()) {
-                case query::QueryType::CREATE: {
+                case query::QueryType::CREATE_TABLE: {
                     auto query = get<query::CreateTable*>(ret->query);
                     std::string tableName = query->table_name;
                     auto columns = query->columns;
@@ -162,6 +160,7 @@ int prompt(const char* location) {
                     auto tableScheme = tableSchemePtr.get();
 
 
+                    // FIXME
                     auto tablePtr = get_table_ptr(tableSchemePtr);
 
                     DenseTuple denseTuple = DenseTuple(tableSchemePtr);
@@ -199,8 +198,36 @@ int prompt(const char* location) {
                     auto table = allTables.at(tableName);
                     auto tableSchemePtr = table.scheme();
 
-                    auto tuplesRepr = select(pageCachePtr, tableSchemePtr, table.fileId(), table.lastPageId().id, query->getWhereExpression());
+                    auto tuplesRepr = select(pageCachePtr, table, query->getWhereExpression());
                     pretty_print_relation(tuplesRepr);
+                    break;
+                }
+                case query::QueryType::CREATE_INDEX: {
+                    auto query = get<query::CreateIndex*>(ret->query);
+                    auto tableName = query->table_name;
+                    auto columns = query->columns();
+
+                    if (columns.size() != 1) {
+                        std::cout << "ERROR: Currently index can be created on exactly 1 column" << std::endl;
+                        break;
+                    }
+                    auto column = columns.at(0);
+
+                    auto allTables = get_tables(pageCachePtr);
+                    auto tableIter = allTables.find(tableName);
+                    if (tableIter == allTables.end()) {
+                        std::cout << "ERROR: Table with name '" << tableName << "' does not exist" << std::endl;
+                        break;
+                    }
+                    auto table = tableIter->second;
+
+                    auto scheme = table.scheme();
+                    if (scheme->typeName(column->name) != "INT") {
+                        std::cout << "ERROR: Only INT columns can be used in index" << std::endl;
+                        break;
+                    }
+
+                    initialize_btree(pageCachePtr, table, scheme->position(column->name));
                     break;
                 }
                 default: {

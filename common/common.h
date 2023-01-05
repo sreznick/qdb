@@ -1,6 +1,9 @@
 #include <table/table.h>
 #include <pagecache/pagecache.h>
 
+std::shared_ptr<TableScheme> get_columns_table_scheme();
+std::shared_ptr<TableScheme> get_tables_table_scheme();
+
 void print_page_meta(PageMeta pageMeta);
 PageMeta* read_page_meta(std::byte* data);
 void write_page_meta(std::byte* dest, PageMeta pageMeta);
