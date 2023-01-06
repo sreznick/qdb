@@ -30,15 +30,19 @@ int main(int argc, const char *argv[]) {
     }
     std::cout << storage.is_present() << std::endl;
 
-    PageCache page {storage, {5, 16384}};
+    PageCache page {storage, {5, 10}};
 
     auto btree = BTree<long long>(page, 20);
 
-    for (int i = 0; i < 1000; i++) {
+    for (int i = 0; i < 10000; i++) {
         btree.insert_key(i);
     }
-    for (int i = 0; i < 1000; i++) {
-        std::cerr << std::endl << btree.has_key(i) << std::endl;
+    for (int i = 0; i < 10000; i++) {
+        assert(btree.has_key(i));
+    }
+
+    for (int i = 10000; i < 20000; i++) {
+        assert(!btree.has_key(i));
     }
 
 

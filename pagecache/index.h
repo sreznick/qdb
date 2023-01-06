@@ -121,10 +121,11 @@ class BTree {
 private:
     PageCache &page_cache;
     int t;
-    Node<T> root;
+    PageId root_page_id;
+    Node<T> shadow_root;
 
     Node<T> find_suitable_leaf(T key) {
-        auto current = root;
+        auto current = get_root();
         while (!current.get_is_leaf()) {
             for (int i = 0; i <= current.get_keys_count(); i++) {
                 if (i == current.get_keys_count() || key < current.get_key_at(i)) {
@@ -134,6 +135,10 @@ private:
             }
         }
         return current;
+    }
+
+    Node<T> get_root() {
+        return Node<T>(page_cache, root_page_id, t);
     }
 
     void split_node(Node<T> node) {
@@ -174,16 +179,21 @@ private:
                 fresh_node.set_children_at(i, node.get_child_at(i + t + 1));
                 page_cache.write(fresh_node.page_id);
                 auto child = fresh_node.get_child_at(page_cache, i);
+                fresh_node = Node<T>(page_cache, fresh_node_page_id, t);
+                node = Node<T>(page_cache, node_page_id, t);
                 child.set_parent(fresh_node.page_id);
                 page_cache.write(child.page_id);
-                fresh_node = Node<T>(page_cache, fresh_node_page_id, t);
+
             }
-            node = Node<T>(page_cache, node_page_id, t);
         }
         page_cache.write(fresh_node.page_id);
         page_cache.write(node.page_id);
-        if (node.page_id.id == root.page_id.id) {
+        auto root = get_root();
+        if (node_page_id.id == root.page_id.id) {
             root = Node<T>(page_cache, t);
+            fresh_node = Node<T>(page_cache, fresh_node_page_id, t);
+            node = Node<T>(page_cache, node_page_id, t);
+            root_page_id = root.page_id;
             root.set_keys_count(1);
             root.set_key_at(0, split_key);
             root.set_children_count(2);
@@ -196,7 +206,10 @@ private:
             page_cache.write(node.page_id);
         } else {
             fresh_node.set_parent(node.get_parent());
+            page_cache.write(fresh_node.page_id);
             auto node_parent = node.get_parent(page_cache);
+            fresh_node = Node<T>(page_cache, fresh_node_page_id, t);
+            node = Node<T>(page_cache, node_page_id, t);
             int position_in_parent = 0;
             while (position_in_parent < node_parent.get_keys_count() &&
                    split_key > node_parent.get_key_at(position_in_parent)) {
@@ -226,15 +239,11 @@ private:
     }
 
 public:
-    BTree(PageCache &page_cache, int t) : page_cache(page_cache), t(t), root(page_cache, t) {};
+    BTree(PageCache &page_cache, int t) : page_cache(page_cache), t(t), shadow_root(page_cache, t), root_page_id(shadow_root.page_id) {};
 
-    BTree(PageCache &page_cache, PageId page_id, int t) : page_cache(page_cache), t(t), root(page_cache, page_id, t) {};
+    BTree(PageCache &page_cache, PageId page_id, int t) : page_cache(page_cache), t(t), shadow_root(page_cache, page_id, t), root_page_id(page_id) {};
 
     ~BTree() = default;
-
-    PageId get_root_page_id() {
-        return root.page_id;
-    }
 
     int sync() {
         return page_cache.sync();
