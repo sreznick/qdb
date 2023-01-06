@@ -32,12 +32,12 @@ int main(int argc, const char *argv[]) {
 
     PageCache page {storage, {5, 16384}};
 
-    auto btree = BTree<int>(page, 3);
+    auto btree = BTree<long long>(page, 20);
 
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < 1000; i++) {
         btree.insert_key(i);
     }
-    for (int i = 0; i < 30; i++) {
+    for (int i = 0; i < 1000; i++) {
         std::cerr << std::endl << btree.has_key(i) << std::endl;
     }
 

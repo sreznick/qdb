@@ -137,13 +137,14 @@ private:
     }
 
     void split_node(Node<T> node) {
+        auto node_page_id = node.page_id;
         auto fresh_node = Node<T>(page_cache, t);
-
+        auto fresh_node_page_id = fresh_node.page_id;
+        node = Node<T>(page_cache, node_page_id, t);
         bool is_leaf = node.get_is_leaf();
 
         if ((node.get_right()).id != -1) {
             fresh_node.set_right(node.get_right());
-            page_cache.write(fresh_node.page_id);
         }
 
         node.set_right(fresh_node.page_id);
@@ -158,7 +159,8 @@ private:
             fresh_node.set_key_at(i, node.get_key_at(i + t + 1));
         }
 
-
+        page_cache.write(fresh_node.page_id);
+        page_cache.write(node.page_id);
         if (is_leaf) {
             fresh_node.set_keys_count(fresh_node.get_keys_count() + 1);
             for (int i = fresh_node.get_keys_count() - 1; i > 0; i--) {
@@ -170,10 +172,16 @@ private:
         } else {
             for (int i = 0; i <= fresh_node.get_keys_count(); i++) {
                 fresh_node.set_children_at(i, node.get_child_at(i + t + 1));
+                page_cache.write(fresh_node.page_id);
+                auto child = fresh_node.get_child_at(page_cache, i);
+                child.set_parent(fresh_node.page_id);
+                page_cache.write(child.page_id);
+                fresh_node = Node<T>(page_cache, fresh_node_page_id, t);
             }
+            node = Node<T>(page_cache, node_page_id, t);
         }
-        page_cache.write(node.page_id);
         page_cache.write(fresh_node.page_id);
+        page_cache.write(node.page_id);
         if (node.page_id.id == root.page_id.id) {
             root = Node<T>(page_cache, t);
             root.set_keys_count(1);
@@ -184,6 +192,8 @@ private:
             node.set_parent(root.page_id);
             fresh_node.set_parent(root.page_id);
             page_cache.write(root.page_id);
+            page_cache.write(fresh_node.page_id);
+            page_cache.write(node.page_id);
         } else {
             fresh_node.set_parent(node.get_parent());
             auto node_parent = node.get_parent(page_cache);

@@ -2,7 +2,6 @@
 
 #include <utility>
 #include <algorithm>
-#include <cassert>
 
 int PageCache::sync() {
     for (auto &page: dirty) {
