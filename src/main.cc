@@ -51,6 +51,15 @@ int main(int argc, const char *argv[]) {
         for (int i = 10000; i < 20000; i++) {
             assert(!btree2.has_key(i));
         }
+        for (int i = 400; i < 450; i++) {
+            for (int j = 1; j < 500; j++) {
+                auto result = std::vector<long long>();
+                for (int k = 0; k < j; k++) {
+                    result.push_back(i + k);
+                }
+                assert(btree2.keys_in_range(i, i + j) == result);
+            }
+        }
     }
 
 

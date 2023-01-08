@@ -291,8 +291,35 @@ public:
         }
         return false;
     }
-};
 
+    /**
+     *
+     * @param from
+     * @param to
+     * @return keys in range [from, to)
+     */
+    std::vector<T> keys_in_range(T from, T to) {
+        auto leaf = find_suitable_leaf(from);
+        std::vector<T> result;
+        while (true) {
+            for (int i = 0; i < leaf.get_keys_count(); i++) {
+                auto key = leaf.get_key_at(i);
+                if (key >= to) {
+                    return result;
+                }
+                if (key < from) {
+                    continue;
+                }
+                result.push_back(key);
+            }
+            if (leaf.get_right().id != -1) {
+                leaf = leaf.get_right(page_cache);
+            } else {
+                return result;
+            }
+        }
+    }
+};
 
 
 #endif //QDB_INDEX_H
