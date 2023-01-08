@@ -11,7 +11,7 @@ int PageCache::sync() {
     return 0;
 }
 
-PageCache::PageCache(Storage storage, PageCacheConfig config) : storage(std::move(storage)), config(config) {
+PageCache::PageCache(Storage& storage, PageCacheConfig config) : storage(storage), config(config) {
     cache = new std::byte* [config.pageCount];
     for (int i = 0; i < config.pageCount; i++) {
         cache[i] = nullptr;

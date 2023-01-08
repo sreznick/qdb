@@ -121,7 +121,6 @@ class BTree {
 private:
     PageCache &page_cache;
     int t;
-    PageId root_page_id;
     Node<T> shadow_root;
 
     Node<T> find_suitable_leaf(T key) {
@@ -238,10 +237,23 @@ private:
         page_cache.write(fresh_node.page_id);
     }
 
-public:
-    BTree(PageCache &page_cache, int t) : page_cache(page_cache), t(t), shadow_root(page_cache, t), root_page_id(shadow_root.page_id) {};
+    static int calculate_t_from_page_size(int page_size) {
+        return (page_size - 4 * sizeof(int) - 2 * sizeof(int)) / (2 * sizeof(T) + 4 * sizeof(int)) - 4;
+    }
 
-    BTree(PageCache &page_cache, PageId page_id, int t) : page_cache(page_cache), t(t), shadow_root(page_cache, page_id, t), root_page_id(page_id) {};
+public:
+    PageId root_page_id;
+
+    BTree(PageCache &page_cache, int default_page_size) : page_cache(page_cache),
+                                                          t(calculate_t_from_page_size(default_page_size)),
+                                                          shadow_root(page_cache, t),
+                                                          root_page_id(shadow_root.page_id) {};
+
+    BTree(PageCache &page_cache, PageId page_id, int default_page_size) : page_cache(page_cache),
+                                                                          t(calculate_t_from_page_size(
+                                                                                  default_page_size)),
+                                                                          shadow_root(page_cache, page_id, t),
+                                                                          root_page_id(page_id) {};
 
     ~BTree() = default;
 
@@ -280,5 +292,7 @@ public:
         return false;
     }
 };
+
+
 
 #endif //QDB_INDEX_H

@@ -7,7 +7,7 @@
 
 class PageCache {
 private:
-    Storage storage;
+    Storage& storage;
     PageCacheConfig config;
     int next_free_slot;
     int last_checked_position;
@@ -26,7 +26,7 @@ private:
     void insert_page_into(PageId pageId, int position);
 
 public:
-    PageCache(Storage storage, PageCacheConfig config);
+    PageCache(Storage& storage, PageCacheConfig config);
     ~PageCache();
 
     /*
