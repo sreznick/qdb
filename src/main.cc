@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <fstream>
+
 #include "storage/storage.h"
 #include "table/table.h"
 #include "pagecache/pagecache.h"
@@ -10,6 +12,20 @@
 void init();
 void example();
 void prompt();
+void file_prompt(std::string filename);
+
+std::vector<std::string> load_queries(std::string filename) {
+    std::ifstream file(filename.c_str());
+    std::string line;
+
+    std::vector<std::string> quieres; // ?
+    while (std::getline(file, line)) {
+        quieres.push_back(line);
+    }
+
+    file.close();
+    return quieres;
+}
 
 std::string query::Expr::print(int depth) {
     std::string left = "", right = "", op = "";
@@ -89,6 +105,7 @@ int main(int argc, const char *argv[]) {
         std::cerr << std::endl;
         std::cerr << "  init - initialize db" << std::endl;
         std::cerr << "  prompt - start client prompt" << std::endl;
+        std::cerr << "  file - start client prompt from file" << std::endl;
         std::cerr << "  example - demonstrating branch" << std::endl;
 
         return 1;
@@ -119,6 +136,11 @@ int main(int argc, const char *argv[]) {
 
     if (std::string("prompt") == argv[1]) {
         prompt();
+        return 0;
+    }
+
+    if (std::string("file") == argv[1] && argc > 3) {
+        file_prompt(argv[3]);
         return 0;
     }
 
@@ -239,7 +261,7 @@ void prompt() {
         query::Query* ret;
 
         if (yyparse(&ret) == 0) {
-            printf("= %d\n", ret->type());
+            // printf("= %d\n", ret->type());
             ret->debug_print();
 /*
             switch (ret->type()) {
@@ -262,3 +284,29 @@ void prompt() {
 
 }
 
+void file_prompt(std::string filename) {
+    std::vector<std::string> query_lines = load_queries(filename);
+    for (std::string query_line : query_lines) {
+        printf("\n%s\n", query_line.c_str());
+        fflush(stdout);
+
+        if (query_line[0] == '\n') {
+            continue;
+        }
+
+        YY_BUFFER_STATE state;
+
+        if (!(state = yy_scan_bytes(query_line.c_str(), strcspn(query_line.c_str(), "\n")))) {
+            continue;
+        }
+
+        query::Query* ret;
+
+        if (yyparse(&ret) == 0) {
+            // printf("= %d\n", ret->type());
+            ret->debug_print();
+        }
+
+        yy_delete_buffer(state);
+    }
+}
