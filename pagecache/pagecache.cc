@@ -4,7 +4,7 @@
 
 int PageCache::find_victim() {
     while (_clock[_clock_position] > 0 && _used == _config.pageCount || _clock[_clock_position] > -1) {
-        _clock[_clock_position] = 0;
+        _clock[_clock_position] = std::max(0, _clock[_clock_position] - 1);
         if (++_clock_position == _config.pageCount)
             _clock_position = 0;
     }
@@ -36,6 +36,14 @@ PageCache::PageCache(Storage storage, PageCacheConfig config): _storage(storage)
     _modified = std::vector(_config.pageCount, false);
     _page_ids = std::vector(_config.pageCount, PageId{ -1, -1 });
     _data = std::vector(_config.pageCount, (std::byte*) nullptr);
+}
+
+PageCache::~PageCache() {
+    for (int i = 0; i < _config.pageCount; ++i) {
+        if (_clock[i] == -1)
+            continue;
+        delete[] _data[i];
+    }
 }
 
 PageId PageCache::create_page(FileId id) {
@@ -71,8 +79,8 @@ std::byte* PageCache::read_page(PageId id) {
 
     auto it = _reverse_page_ids.find(id);
     if (it != _reverse_page_ids.end()) {
-        int i = (*it).second;
-        _clock[i] = 1;
+        int i = it->second;
+        _clock[i] = std::min(_config.countLimit, _clock[i] + 1);
         return _data[i];
     }
 
@@ -98,9 +106,9 @@ int PageCache::write(PageId id) {
     if (it == _reverse_page_ids.end())
         return -1;
 
-    int i = (*it).second;
+    int i = it->second;
     _modified[i] = true;
-    _clock[i] = 1;
+    _clock[i] = std::min(_config.countLimit, _clock[i] + 1);
     return 0;
 }
 

@@ -29,6 +29,7 @@ private:
 
 public:
     PageCache(Storage storage, PageCacheConfig config);
+    ~PageCache();
 
     /*
       Создает новую страницу в хранилище и размещает ее в кеше
