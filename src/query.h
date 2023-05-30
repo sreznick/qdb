@@ -7,8 +7,21 @@
 
 namespace query {
 
-    class Expr;
-    class LogicalExpr;
+    class Expr {
+    public:
+        Expr() {};
+        virtual std::string print(int depth) {
+            return "";
+        }
+    };
+
+    class LogicalExpr {
+    public:
+        LogicalExpr() {};
+        virtual std::string print(int depth) {
+            return "";
+        };
+    };
 
     class CharType {
     private:
@@ -120,8 +133,8 @@ namespace query {
                 return "TEXT: " + std::get<std::string>(_value) + "";
             else if (std::holds_alternative<bool>(_value)) {
                 if (std::get<bool>(_value))
-                    return "BOOLEAN TRUE";
-                return "BOOLEAN FALSE";
+                    return "BOOLEAN: TRUE";
+                return "BOOLEAN: FALSE";
             }
             return "UNKNOWN";
         }
@@ -144,36 +157,142 @@ namespace query {
         }
     };
 
-    enum ExprType { PLUS, MINUS, UN_MINUS, MULTIPLY, DIVIDE, BRACKETS,
-            INTEGER, EXPR_REAL, STRING, FIELD, LOGICAL_EXPR };
-    enum LogicalExprType { TRUE, FALSE, LOG_BRACKETS, EQ, NEQ, AND, OR, NOT };
-
-    class Expr {
+    class ExprOp : public Expr {
     public:
-        ExprType _type;
-        int _integerField;
-        std::string _stringField;
-        float _floatField;
-        Expr* _leftExpr = nullptr;
-        Expr* _rightExpr = nullptr;
-        LogicalExpr* _logicalExpr = nullptr;
+        Expr* _leftExpr;
+        Expr* _rightExpr;
+        std::string _op;
 
-        Expr(ExprType type) : _type(type) {}
+        ExprOp(Expr* leftExpr, Expr* rightExpr, std::string op) :
+            _leftExpr(leftExpr), _rightExpr(rightExpr), _op(op) {};
 
-        std::string print(int depth);
+        std::string print(int depth) {
+            return _leftExpr->print(depth + 2) +
+                std::string(depth, ' ') + _op + '\n' +
+                _rightExpr->print(depth + 2);
+        }
     };
 
-    class LogicalExpr {
+    class ExprMinus : public Expr {
     public:
-        LogicalExprType _type;
-        Expr* _leftExpr = nullptr;
-        Expr* _rightExpr = nullptr;
-        LogicalExpr* _leftLogicalExpr = nullptr;
-        LogicalExpr* _rightLogicalExpr = nullptr;
+        Expr* _expr;
 
-        LogicalExpr(LogicalExprType type) : _type(type) {}
+        ExprMinus(Expr* expr) : _expr(expr) {};
 
-        std::string print(int depth);
+        std::string print(int depth) {
+            return std::string(depth, ' ') + "-\n" + _expr->print(depth + 2);
+        }
+    };
+
+    class ExprBrackets : public Expr {
+    public:
+        Expr* _expr;
+
+        ExprBrackets(Expr* expr) : _expr(expr) {};
+
+        std::string print(int depth) {
+            return std::string(depth, ' ') + "()\n" + _expr->print(depth + 2);
+        }
+    };
+
+    class ExprValue : public Expr {
+    public:
+        FieldValue _value;
+
+        ExprValue(int value) : _value(FieldValue(value)) {};
+        ExprValue(float value) : _value(FieldValue(value)) {};
+        ExprValue(std::string value) : _value(FieldValue(value)) {};
+
+        std::string print(int depth) {
+            return std::string(depth, ' ') + _value.getString() + '\n';
+        }
+    };
+
+    class ExprField : public Expr {
+    public:
+        std::string _field;
+
+        ExprField(std::string field) : _field(field) {};
+
+        std::string print(int depth) {
+            return std::string(depth, ' ') + "UNKNOWN\n";
+        }
+    };
+
+    class ExprLogical : public Expr {
+    public:
+        LogicalExpr* _logicalExpr;
+
+        ExprLogical(LogicalExpr* logicalExpr) : _logicalExpr(logicalExpr) {};
+
+        std::string print(int depth) {
+            return _logicalExpr->print(depth);
+        }
+    };
+
+    class LogicalExprBool : public LogicalExpr {
+    public:
+        FieldValue _value;
+
+        LogicalExprBool(bool value) : _value(FieldValue(value)) {};
+
+        std::string print(int depth) {
+            return std::string(depth, ' ') + _value.getString() + '\n';
+        }
+    };
+
+    class LogicalExprOp : public LogicalExpr {
+    public:
+        Expr* _leftExpr;
+        Expr* _rightExpr;
+        std::string _op;
+
+        LogicalExprOp(Expr* leftExpr, Expr* rightExpr, std::string op) :
+            _leftExpr(leftExpr), _rightExpr(rightExpr), _op(op) {};
+
+        std::string print(int depth) {
+            return _leftExpr->print(depth + 2) +
+                   std::string(depth, ' ') + _op + '\n' +
+                   _rightExpr->print(depth + 2);
+        }
+    };
+
+    class LogicalExprLogicalOp : public LogicalExpr {
+    public:
+        LogicalExpr* _leftExpr;
+        LogicalExpr* _rightExpr;
+        std::string _op;
+
+        LogicalExprLogicalOp(LogicalExpr* leftExpr, LogicalExpr* rightExpr, std::string op) :
+                _leftExpr(leftExpr), _rightExpr(rightExpr), _op(op) {};
+
+        std::string print(int depth) {
+            return _leftExpr->print(depth + 2) +
+                   std::string(depth, ' ') + _op + '\n' +
+                   _rightExpr->print(depth + 2);
+        }
+    };
+
+    class LogicalExprNot : public LogicalExpr {
+    public:
+        LogicalExpr* _expr;
+
+        LogicalExprNot(LogicalExpr* expr) : _expr(expr) {};
+
+        std::string print(int depth) {
+            return std::string(depth, ' ') + "NOT\n" + _expr->print(depth + 2);
+        }
+    };
+
+    class LogicalExprBrackets : public LogicalExpr {
+    public:
+        LogicalExpr* _expr;
+
+        LogicalExprBrackets(LogicalExpr* expr) : _expr(expr) {};
+
+        std::string print(int depth) {
+            return std::string(depth, ' ') + "()\n" + _expr->print(depth + 2);
+        }
     };
 
     enum Type {CREATE, INSERT, SELECT, DELETE, UPDATE, UNKNOWN};

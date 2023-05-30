@@ -218,86 +218,61 @@ exprs:
 
 logical_expr :
     KW_TRUE {
-        $$ = new query::LogicalExpr(query::LogicalExprType::TRUE);
+        $$ = new query::LogicalExprBool(true);
     } |
     KW_FALSE {
-        $$ = new query::LogicalExpr(query::LogicalExprType::FALSE);
+        $$ = new query::LogicalExprBool(false);
     } |
     LPAREN logical_expr RPAREN {
-        $$ = new query::LogicalExpr(query::LogicalExprType::LOG_BRACKETS);
-        $$->_rightLogicalExpr = $2;
+        $$ = new query::LogicalExprBrackets($2);
     } |
     expr KW_EQ expr {
-        $$ = new query::LogicalExpr(query::LogicalExprType::EQ);
-        $$->_leftExpr = $1;
-        $$->_rightExpr = $3;
+        $$ = new query::LogicalExprOp($1, $3, "==");
     } |
     expr KW_NEQ expr {
-        $$ = new query::LogicalExpr(query::LogicalExprType::NEQ);
-        $$->_leftExpr = $1;
-        $$->_rightExpr = $3;
+        $$ = new query::LogicalExprOp($1, $3, "!=");
     } |
     logical_expr KW_OR logical_expr {
-        $$ = new query::LogicalExpr(query::LogicalExprType::OR);
-        $$->_leftLogicalExpr = $1;
-        $$->_rightLogicalExpr = $3;
+        $$ = new query::LogicalExprLogicalOp($1, $3, "OR");
     } |
     logical_expr KW_AND logical_expr {
-        $$ = new query::LogicalExpr(query::LogicalExprType::AND);
-        $$->_leftLogicalExpr = $1;
-        $$->_rightLogicalExpr = $3;
+        $$ = new query::LogicalExprLogicalOp($1, $3, "AND");
     } |
     KW_NOT logical_expr {
-        $$ = new query::LogicalExpr(query::LogicalExprType::NOT);
-        $$->_rightLogicalExpr = $2;
+        $$ = new query::LogicalExprNot($2);
     }
 
 expr:
     expr PLUS expr {
-        $$ = new query::Expr(query::ExprType::PLUS);
-        $$->_leftExpr = $1;
-        $$->_rightExpr = $3;
-    } |
-    MINUS expr %prec TIMES {
-        $$ = new query::Expr(query::ExprType::UN_MINUS);
-        $$->_rightExpr = $2;
+        $$ = new query::ExprOp($1, $3, "+");
     } |
     expr MINUS expr {
-        $$ = new query::Expr(query::ExprType::MINUS);
-        $$->_leftExpr = $1;
-        $$->_rightExpr = $3;
+        $$ = new query::ExprOp($1, $3, "-");
+    } |
+    MINUS expr %prec TIMES {
+        $$ = new query::ExprMinus($2);
     } |
     expr TIMES expr {
-        $$ = new query::Expr(query::ExprType::MULTIPLY);
-        $$->_leftExpr = $1;
-        $$->_rightExpr = $3;
+        $$ = new query::ExprOp($1, $3, "*");
     } |
     expr DIVIDE expr {
-        $$ = new query::Expr(query::ExprType::DIVIDE);
-        $$->_leftExpr = $1;
-        $$->_rightExpr = $3;
+        $$ = new query::ExprOp($1, $3, "/");
     } |
     LPAREN expr RPAREN {
-        $$ = new query::Expr(query::ExprType::BRACKETS);
-        $$->_rightExpr = $2;
+        $$ = new query::ExprBrackets($2);
     } |
     NUMBER {
-        $$ = new query::Expr(query::ExprType::INTEGER);
-        $$->_integerField = $1;
+        $$ = new query::ExprValue($1);
     } |
     REAL {
-        $$ = new query::Expr(query::ExprType::EXPR_REAL);
-        $$->_floatField = $1;
+        $$ = new query::ExprValue($1);
     } |
     STRING {
-        $$ = new query::Expr(query::ExprType::STRING);
-        $$->_stringField = *$1;
+        $$ = new query::ExprValue(*$1);
     } |
     IDENTIFIER {
-        $$ = new query::Expr(query::ExprType::FIELD);
-        $$->_stringField = *$1;
+        $$ = new query::ExprField(*$1);
     } |
     logical_expr {
-        $$ = new query::Expr(query::ExprType::LOGICAL_EXPR);
-        $$->_logicalExpr = $1;
+        $$ = new query::ExprLogical($1);
     }
