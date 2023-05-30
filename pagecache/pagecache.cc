@@ -1,9 +1,10 @@
 #include "pagecache.h"
+#include "pagecache_test.h"
 
 #include <cstring>
 
 int PageCache::find_victim() {
-    while (_clock[_clock_position] > 0 && _used == _config.pageCount || _clock[_clock_position] > -1) {
+    while (_clock[_clock_position] > 0 || _clock[_clock_position] == 0 && _used < _config.pageCount) {
         _clock[_clock_position] = std::max(0, _clock[_clock_position] - 1);
         if (++_clock_position == _config.pageCount)
             _clock_position = 0;
@@ -17,6 +18,7 @@ int PageCache::kill_victim(int i) {
 
     _used -= 1;
     _clock[i] = -1;
+    _modified[i] = false;
     _reverse_page_ids.erase(_page_ids[i]);
     delete[] _data[i];
     return 0;
