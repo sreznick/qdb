@@ -33,5 +33,7 @@ public:
     int read(std::byte* data, PageId id);
     PageId create_page(FileId id);
     int write(std::byte* data, PageId id);
+
+    int page_size();
 };
 

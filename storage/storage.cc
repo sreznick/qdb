@@ -157,3 +157,6 @@ PageId Storage::create_page(FileId id) {
     return {id, pos / _config.pageSize};
 }
 
+int Storage::page_size() {
+    return _config.pageSize;
+}
