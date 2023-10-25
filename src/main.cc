@@ -39,6 +39,7 @@ int main(int argc, const char *argv[]) {
         std::cerr << "  prompt - start client prompt" << std::endl;
         std::cerr << "  file - start client prompt from file" << std::endl;
         std::cerr << "  example - demonstrating branch" << std::endl;
+        std::cerr << "  test - run PageCache::test()" << std::endl;
 
         return 1;
     }
@@ -73,7 +74,10 @@ int main(int argc, const char *argv[]) {
 
     if (std::string("file") == argv[1] && argc > 3) {
         file_prompt(argv[3]);
-        return 0;
+    if (std::string("test") == argv[1]) {
+        PageCache page_cache {storage, {1, 3}};
+        page_cache.test();
+        std::cerr << "Tests passed!" << std::endl;
     }
 
     return 0;
