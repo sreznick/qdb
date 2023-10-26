@@ -69,6 +69,8 @@ public:
         int valueSize = 20;
         switch (_typeTag) {
             case TypeTag::INT:
+            case TypeTag::DOUBLE:
+            case TypeTag::BOOL:
                 valueSize = 10;
         }
         return std::max(valueSize, static_cast<int>(_name.size()));
@@ -200,6 +202,27 @@ public:
         return result;
     }
 
+    void setDouble(int fieldPos, double value) {
+        ::memcpy(_data + _offsets[fieldPos], &value, 8);
+    }
+
+    double getDouble(int fieldPos) {
+        double result;
+        ::memcpy(&result, _data + _offsets[fieldPos], 8);
+
+        return result;
+    }
+
+    void setBool(int fieldPos, bool value) {
+        ::memcpy(_data + _offsets[fieldPos], &value, 1);
+    }
+
+    bool getBool(int fieldPos) {
+        bool result;
+        ::memcpy(&result, _data + _offsets[fieldPos], 1);
+
+        return result;
+    }
 
     void setChar(int fieldPos, std::string value) {
         ::memcpy(_data + _offsets[fieldPos], value.c_str(), value.size());
@@ -222,6 +245,17 @@ public:
                 ss << s;
                 break;
             }
+            case TypeTag::DOUBLE: {
+                std::string s = std::to_string(getDouble(fieldPos));
+                ss << s;
+                break;
+            }
+            case TypeTag::BOOL: {
+                std::string s = std::to_string(getBool(fieldPos));
+                ss << s;
+                break;
+            }
+            case TypeTag::CHAR:
             case TypeTag::VARCHAR: {
                 ss << getChar(fieldPos);
             }
@@ -288,6 +322,7 @@ struct TableMeta {
 
     std::int32_t fileId;
     std::int32_t lastPageId;
+    std::int32_t tupleNum;
 };
 
 struct PageMeta {

@@ -135,10 +135,10 @@ fs::path Storage::file_path(FileId id) {
 PageId Storage::create_page(FileId id) {
     if (!_openFiles.contains(id.id)) {
         const char* name = file_path(id).c_str();
-        std::cout << "going to open file " << name << std::endl;
+        // std::cout << "going to open file " << name << std::endl;
 
         int fd = open(name, O_CREAT | O_RDWR, 0644);
-        std::cout << "fd " << fd << std::endl;
+        // std::cout << "fd " << fd << std::endl;
         if (fd < 0) {
             return {id, -1};
         }
@@ -152,7 +152,7 @@ PageId Storage::create_page(FileId id) {
         return {id, -1};
     }
 
-    std::cout << pos << std::endl;
+    // std::cout << pos << std::endl;
 
     std::byte data[_config.pageSize];
     memset(data, 0, _config.pageSize);

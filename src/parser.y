@@ -170,6 +170,12 @@ value :
     } |
     STRING {
         $$ = new query::FieldValue(*$1);
+    } |
+    KW_TRUE {
+        $$ = new query::FieldValue(true);
+    } |
+    KW_FALSE {
+        $$ = new query::FieldValue(false);
     }
 
 field_sets :

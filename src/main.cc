@@ -15,7 +15,7 @@
 
 int init(Storage storage);
 void example();
-void prompt();
+void prompt(std::shared_ptr<PageCache> pageCache);
 void file_prompt(std::string filename);
 
 std::vector<std::string> load_queries(std::string filename) {
@@ -59,13 +59,16 @@ int main(int argc, const char *argv[]) {
         return 2;
     }
 
+    PageCache pageCache {storage, {PAGE_CACHE_COUNT_LIMIT, PAGE_CACHE_PAGE_COUNT}};
+    auto pageCachePtr = std::make_shared<PageCache>(pageCache);
+
     if (std::string("example") == argv[1]) {
         example();
         return 0;
     }
 
     if (std::string("prompt") == argv[1]) {
-        prompt();
+        prompt(pageCachePtr);
         return 0;
     }
 
@@ -182,17 +185,38 @@ void example() {
     std::cout << std::endl;
 }
 
-void prompt() {
+void prompt(std::shared_ptr<PageCache> pageCache) {
 /*
  *  TODO 
  * 
  *    - добавить логику из прошлого ДЗ с разбором запросов
  *    - вызывать функции из qengine для CREATE TABLE, INSERT, SELECT
  *    - для SELECT напечатать результат в виде простой таблицы
- *    - для CREATE TABLE напечать 'table <name> created' 
- *    - для INSERT гапечатать количество записей после добавления
+ *    - для CREATE TABLE напечатать 'table <name> created'
+ *    - для INSERT напечатать количество записей после добавления
  *
  */
+
+    std::map<std::string, std::shared_ptr<Table>> tableDict;
+
+    std::string m_tables_name("m_tables");
+    std::string m_columns_name("m_columns");
+
+    tableDict[m_tables_name] = std::make_shared<Table>(
+            Table(m_tables_name, get_m_tables_scheme(), FileId { M_TABLES_FILE_ID }));
+    tableDict[m_columns_name] = std::make_shared<Table>(
+            Table(m_columns_name, get_m_columns_scheme(), FileId { M_COLUMNS_FILE_ID }));
+
+    // Нахождение максимального FileId.
+
+    int maxFileId = std::max(M_TABLES_FILE_ID, M_COLUMNS_FILE_ID);
+    auto selected = select_all(pageCache, tableDict[m_tables_name]);
+
+    for (auto elem : selected)
+        maxFileId = std::max(maxFileId, elem.getInt(0));
+
+    // Обработка запросов.
+
     while (1) {
         printf("sql>");
         fflush(stdout);
@@ -217,21 +241,168 @@ void prompt() {
 
         if (yyparse(&ret) == 0) {
             // printf("= %d\n", ret->type());
-            ret->debug_print();
-/*
+            // ret->debug_print();
+
             switch (ret->type()) {
+                case query::Type::SELECT: {
+                    auto tableName = ret->select()->name();
+
+                    if (tableDict.count(tableName) == 0) {
+                        std::cout << "No such table." << std::endl;
+                        break; // TODO: поиск таблицы в мета-таблицах.
+                    }
+
+                    auto selected = select_all(pageCache, tableDict[tableName]); // TODO: SELECT с WHERE.
+
+                    if (selected.size() == 0) {
+                        std::cout << "Empty SELECT." << std::endl;
+                        break;
+                    }
+
+                    bool hasHeader = false;
+                    for (auto elem : selected) {
+                        if (!hasHeader) {
+                            elem.print_header();
+                            hasHeader = true;
+                        }
+                        elem.print_values();
+                    }
+                }
+                break;
+
                 case query::Type::CREATE: {
-                    printf("= %s\n", ret->createTable()->name().c_str());
+                    auto tableName = ret->createTable()->name();
+
+                    if (tableDict.count(tableName) != 0) {
+                        std::cout << "Table already exists." << std::endl;
+                        break; // TODO: поиск таблицы в мета-таблицах?
+                    }
+
+                    auto fieldDefs = ret->createTable()->fieldDefs();
+
+                    std::vector<ColumnScheme> tableColumns;
+                    for (auto fieldDef : *fieldDefs) {
+                        auto dbType = fieldDef->db_type();
+                        tableColumns.push_back(ColumnScheme(fieldDef->name(), dbType.first, dbType.second));
+                    }
+                    auto tableColumnsPtr = std::make_shared<std::vector<ColumnScheme>>(tableColumns);
+
+                    TableScheme tableScheme(tableColumnsPtr);
+                    auto tableSchemePtr = std::make_shared<TableScheme>(tableScheme);
+
+                    auto table = create_table(pageCache, FileId { ++maxFileId }, tableName, tableSchemePtr);
+                    tableDict[tableName] = table;
+
+                    std::cout << "Table " << tableName << " created." << std::endl;
                 }
                 break;
 
                 case query::Type::INSERT: {
-                    printf("= %s\n", ret->insert()->name().c_str());
+                    auto tableName = ret->insert()->name();
+
+                    if (tableDict.count(tableName) == 0) {
+                        std::cout << "No such table." << std::endl;
+                        break; // TODO: поиск таблицы в мета-таблицах.
+                    }
+
+                    auto table = tableDict[tableName];
+
+                    auto fieldVals = ret->insert()->values();
+                    auto tableScheme = table->scheme();
+
+                    if (tableScheme->columnsCount() != fieldVals->size()) {
+                        std::cout << "Incorrect number of values." << std::endl;
+                        break;
+                    }
+
+                    DenseTuple denseTuple(tableScheme);
+
+                    bool brokenFor = false;
+                    for (int i = 0; i < fieldVals->size(); ++i) {
+                        auto dbVal = (*fieldVals)[i]->dbGet();
+                        auto type = dbVal.first;
+                        auto value = dbVal.second;
+
+                        tableScheme->typeTag(i);
+
+                        if (type == "INT") {
+                            if (tableScheme->typeTag(i) == TypeTag::INT) {
+                                denseTuple.setInt(i, std::stoi(value));
+                            }
+                            else if (tableScheme->typeTag(i) == TypeTag::DOUBLE) {
+                                denseTuple.setDouble(i, std::stod(value));
+                            }
+                            else {
+                                std::cout << "Incorrect value for column '" <<
+                                          tableScheme->name(i) << "'." << std::endl;
+                                brokenFor = true;
+                                break;
+                            }
+                        }
+                        else if (type == "REAL") {
+                            if (tableScheme->typeTag(i) != TypeTag::DOUBLE) {
+                                std::cout << "Incorrect value for column '" <<
+                                          tableScheme->name(i) << "'." << std::endl;
+                                brokenFor = true;
+                                break;
+                            }
+
+                            denseTuple.setDouble(i, std::stod(value));
+                        }
+                        else if (type == "TEXT") {
+                            if (tableScheme->typeTag(i) != TypeTag::CHAR &&
+                                tableScheme->typeTag(i) != TypeTag::VARCHAR) {
+                                std::cout << "Incorrect value for column '" <<
+                                          tableScheme->name(i) << "'." << std::endl;
+                                brokenFor = true;
+                                break;
+                            }
+
+                            if (tableScheme->typeTag(i) == TypeTag::CHAR && value.size() != tableScheme->fieldSize(i)) {
+                                std::cout << "Incorrect size (" << value.size() << ") of value for column '" <<
+                                          tableScheme->name(i) << "', which is CHAR[" << tableScheme->fieldSize(i) <<
+                                          "]." << std::endl;
+                                brokenFor = true;
+                                break;
+                            }
+
+                            if (tableScheme->typeTag(i) == TypeTag::VARCHAR &&
+                                value.size() > tableScheme->fieldSize(i)) {
+                                std::cout << "Incorrect size (" << value.size() << ") of value for column '" <<
+                                          tableScheme->name(i) << "', which is VARCHAR[" << tableScheme->fieldSize(i) <<
+                                          "]." << std::endl;
+                                brokenFor = true;
+                                break;
+                            }
+
+                            denseTuple.setChar(i, value);
+                        }
+                        else if (type == "BOOLEAN") {
+                            if (tableScheme->typeTag(i) != TypeTag::BOOL) {
+                                std::cout << "Incorrect value for column '" <<
+                                          tableScheme->name(i) << "'." << std::endl;
+                                brokenFor = true;
+                                break;
+                            }
+
+                            denseTuple.setBool(i, value != "");
+                        }
+                        else {
+                            std::cout << type << " is not supported." << std::endl;
+                            brokenFor = true;
+                            break;
+                        }
+                    }
+                    if (brokenFor)
+                        break;
+
+                    auto denseTuplePtr = std::make_shared<DenseTuple>(denseTuple);
+                    auto tupleNum = insert_tuple(pageCache, table, denseTuplePtr);
+                    std::cout << "Table " << tableName << " now has " << tupleNum << " tuples." << std::endl;
                 }
                 break;
 
             }
-*/
         }
 
         yy_delete_buffer(state);
@@ -240,6 +411,8 @@ void prompt() {
 }
 
 void file_prompt(std::string filename) {
+    // Не работает. И не планирует. Пользуйтесь интерактивным режимом.
+
     std::vector<std::string> query_lines = load_queries(filename);
     for (std::string query_line : query_lines) {
         printf("\n%s\n", query_line.c_str());

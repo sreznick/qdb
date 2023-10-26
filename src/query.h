@@ -1,5 +1,7 @@
 #pragma once
 
+#include "table/types.h"
+
 #include <string>
 #include <variant>
 #include <vector>
@@ -97,7 +99,6 @@ namespace query {
             if (_type->getAsVarChar() != nullptr)
                 return "VARCHAR[" + std::to_string(_type->getAsVarChar()->size()) + "]";
 
-
             BasicType basic = _type->getAsBasic();
             switch (basic) {
                 case BasicType::BOOLEAN:
@@ -110,6 +111,31 @@ namespace query {
                     return "TEXT";
                 default:
                     return "UNKNOWN";
+            }
+        }
+
+        std::pair<TypeTag, int> db_type() {
+            if (_type->getAsChar() != nullptr)
+                return { TypeTag::CHAR, _type->getAsChar()->size() };
+            if (_type->getAsVarChar() != nullptr)
+                return { TypeTag::VARCHAR, _type->getAsVarChar()->size() };
+
+            BasicType basic = _type->getAsBasic();
+            switch (basic) {
+                case BasicType::BOOLEAN:
+                    return { TypeTag::BOOL, 0 };
+                case BasicType::INT:
+                    return { TypeTag::INT, 0 };
+                case BasicType::REAL:
+                    return { TypeTag::DOUBLE, 0 };
+                case BasicType::TEXT: {
+                    std::cout << "TEXT is not supported.";
+                    exit(1);
+                }
+                default: {
+                    std::cout << "UNKNOWN is not supported.";
+                    exit(1);
+                }
             }
         }
     };
@@ -137,6 +163,22 @@ namespace query {
                 return "BOOLEAN: FALSE";
             }
             return "UNKNOWN";
+        }
+
+        std::pair<std::string, std::string> dbGet() {
+            if (std::holds_alternative<int>(_value))
+                return { "INT", std::to_string(std::get<int>(_value)) };
+            else if (std::holds_alternative<float>(_value))
+                return { "REAL", std::to_string(std::get<float>(_value)) };
+            else if (std::holds_alternative<std::string>(_value))
+                return { "TEXT", std::get<std::string>(_value) };
+            else if (std::holds_alternative<bool>(_value)) {
+                if (std::get<bool>(_value))
+                    return { "BOOLEAN", "1" };
+                return{ "BOOLEAN", "" };
+            }
+            std::cout << "UNKNOWN is not supported.";
+            exit(1);
         }
     };
 

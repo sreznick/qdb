@@ -18,6 +18,9 @@ void write_page_header(std::byte* page, PageMeta* pageMeta, TableMeta* tableMeta
 
     memcpy(page + accumulator, &tableMeta->lastPageId, sizeof tableMeta->lastPageId);
     accumulator += sizeof tableMeta->lastPageId;
+
+    memcpy(page + accumulator, &tableMeta->tupleNum, sizeof tableMeta->tupleNum);
+    accumulator += sizeof tableMeta->tupleNum;
 }
 
 int get_header_length(std::byte* page) {
@@ -74,6 +77,32 @@ std::int32_t get_last_page(std::shared_ptr<PageCache> pageCache, FileId fileId) 
     return lastPage;
 }
 
+void set_tuple_num(std::shared_ptr<PageCache> pageCache, FileId fileId, int newTupleNum) {
+    PageId firstPageId { fileId, 0 };
+    std::byte* page = pageCache->read_page(firstPageId);
+
+    std::int32_t offset = (sizeof PageMeta::hasTableMeta) + (sizeof PageMeta::dataPtr) +
+            (sizeof TableMeta::fileId) + (sizeof TableMeta::lastPageId);
+    memcpy(page + offset, &newTupleNum, sizeof newTupleNum); // TODO: check.
+
+    if (pageCache->write(firstPageId) < 0) {
+        std::cout << "FAIL" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+}
+
+std::int32_t get_tuple_num(std::shared_ptr<PageCache> pageCache, FileId fileId) {
+    PageId firstPageId { fileId, 0 };
+    std::byte* page = pageCache->read_page(firstPageId);
+
+    std::int32_t tupleNum;
+    std::int32_t offset = (sizeof PageMeta::hasTableMeta) + (sizeof PageMeta::dataPtr) +
+                          (sizeof TableMeta::fileId) + (sizeof TableMeta::lastPageId);
+    memcpy(&tupleNum, page + offset, sizeof tupleNum); // TODO: check.
+
+    return tupleNum;
+}
+
 void insert_tuple_on_page(std::shared_ptr<PageCache> pageCache,
                           PageId pageId,
                           std::shared_ptr<DenseTuple> data) {
@@ -93,6 +122,8 @@ void insert_tuple_on_page(std::shared_ptr<PageCache> pageCache,
 
     memcpy(page + (pageDataPtr - dataSize), dataPtr, dataSize);
     set_data_ptr(page, pageDataPtr - dataSize);
+
+    set_tuple_num(pageCache, pageId.fileId, get_tuple_num(pageCache, pageId.fileId) + 1);
 
     if (pageCache->write(pageId) < 0) {
         std::cout << "FAIL" << std::endl;
@@ -232,10 +263,11 @@ std::shared_ptr<Table> create_table(std::shared_ptr<PageCache> pageCache,
 
     pageCache->sync();
 
-    return 0;
+    Table table(name, tableScheme, fileId);
+    return std::make_shared<Table>(table);
 }
 
-void insert_tuple(std::shared_ptr<PageCache> pageCache,
+int insert_tuple(std::shared_ptr<PageCache> pageCache,
                   std::shared_ptr<Table> table,
                   std::shared_ptr<DenseTuple> data) {
     /*
@@ -253,10 +285,14 @@ void insert_tuple(std::shared_ptr<PageCache> pageCache,
      *
      */
 
+    insert_tuple_in_file(pageCache, table->fileId(), data);
 
+    pageCache->sync();
+
+    return get_tuple_num(pageCache, table->fileId());
 }
 
-std::vector<DenseTuple> select_all(std::shared_ptr<PageCache> pageCache, std::shared_ptr<Table>) {
+std::vector<DenseTuple> select_all(std::shared_ptr<PageCache> pageCache, std::shared_ptr<Table> table) {
     /*
      * TODO:
      *
@@ -270,10 +306,29 @@ std::vector<DenseTuple> select_all(std::shared_ptr<PageCache> pageCache, std::sh
      * Для простоты считаем, что  ошибок не бывает
      *
      */
-     return std::vector<DenseTuple>{};
+
+    std::vector<DenseTuple> selected;
+
+    auto fileId = table->fileId();
+    auto dataSize = table->scheme()->totalSize();
+
+    auto lastPageId = get_last_page(pageCache, table->fileId());
+    for (int i = 0; i <= lastPageId; ++i) {
+        PageId pageId{ fileId, i };
+
+        std::byte* page = pageCache->read_page(pageId);
+        auto pageDataPtr = get_data_ptr(page);
+
+        while (pageDataPtr < pageCache->page_size()) {
+            selected.push_back(DenseTuple(table->scheme(), page + pageDataPtr));
+            pageDataPtr += dataSize;
+        }
+    }
+
+    return selected;
 }
 
-std::vector<DenseTuple> select(std::shared_ptr<Storage> pageCache, std::shared_ptr<Table>) {
+std::vector<DenseTuple> select(std::shared_ptr<Storage> pageCache, std::shared_ptr<Table> table) {
     /*
      * TODO:
      *
