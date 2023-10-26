@@ -4,12 +4,16 @@
 #include "storage/storage.h"
 #include "table/table.h"
 #include "pagecache/pagecache.h"
+#include "qengine/qengine.h"
 
 #include "query.h"
 #include "lexer.h"
 #include "parser.h"
 
-void init();
+#define PAGE_CACHE_COUNT_LIMIT 5
+#define PAGE_CACHE_PAGE_COUNT 16384
+
+int init(Storage storage);
 void example();
 void prompt();
 void file_prompt(std::string filename);
@@ -45,21 +49,14 @@ int main(int argc, const char *argv[]) {
     }
 
     Storage storage(argv[2]);
-    if (!storage.is_present()) {
-        if (!storage.can_initialize()) {
-            std::cerr << "Please specify one of" << std::endl;
-            std::cerr << "  - path to existing storage (to use it)" << std::endl;
-            std::cerr << "  - path to absolutely empty directory (to create storage there)" << std::endl;
-            std::cerr << "  - non-existing path (to create storage there)" << std::endl;
-
-            return 2;
-        }
-        storage.initialize();
-    }
 
     if (std::string("init") == argv[1]) {
-        init();
-        return 0;
+        return init(storage);
+    }
+
+    if (!storage.is_present()) {
+        std::cerr << "Please initialize database first." << std::endl;
+        return 2;
     }
 
     if (std::string("example") == argv[1]) {
@@ -74,6 +71,8 @@ int main(int argc, const char *argv[]) {
 
     if (std::string("file") == argv[1] && argc > 3) {
         file_prompt(argv[3]);
+        return 0;
+    }
     if (std::string("test") == argv[1]) {
         PageCache page_cache {storage, {1, 3}};
         page_cache.test();
@@ -84,7 +83,7 @@ int main(int argc, const char *argv[]) {
 }
 
 
-void init() {
+int init(Storage storage) {
     // TODO: реализовать инициализацию базы
     // 
     // В предположении, что папка пустая, нужно создать 
@@ -93,7 +92,7 @@ void init() {
     // В одной будут храниться таблицы, в другой - поля
     //  
     // m_tables 
-    //   INT qid
+    //   INT qid (a.k.a. fileId)
     //   VARCHAR(50) name 
     //
     // m_columns 
@@ -104,7 +103,27 @@ void init() {
     //
     //
     //  Данные метатаблиц тоже должны присутствовать в метатаблицах
-    // 
+    //
+
+    if (storage.is_present()) {
+        std::cerr << "You cannot initialize already initialized database." << std::endl;
+        return 2;
+    }
+    if (!storage.can_initialize()) {
+        std::cerr << "Please specify one of" << std::endl;
+        std::cerr << "  - path to existing storage (to use it)" << std::endl;
+        std::cerr << "  - path to absolutely empty directory (to create storage there)" << std::endl;
+        std::cerr << "  - non-existing path (to create storage there)" << std::endl;
+
+        return 2;
+    }
+    storage.initialize();
+
+    PageCache pageCache {storage, {PAGE_CACHE_COUNT_LIMIT, PAGE_CACHE_PAGE_COUNT}};
+    auto pageCachePtr = std::make_shared<PageCache>(pageCache);
+    init_m_tables(pageCachePtr);
+
+    return 0;
 }
 
 void example() {

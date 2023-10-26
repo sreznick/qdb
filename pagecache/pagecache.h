@@ -60,6 +60,8 @@ public:
      */
     int sync();
 
+    int page_size();
+
     void test();
 };
 

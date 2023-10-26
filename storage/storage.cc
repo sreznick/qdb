@@ -78,21 +78,29 @@ void Storage::close(FileId id) {
 }
     
 int Storage::read(std::byte* data, PageId pageId) {
-    if (_openFiles.contains(pageId.fileId.id)) {
-        int fd = _openFiles[pageId.fileId.id];
+    if (!_openFiles.contains(pageId.fileId.id)) {
+        const char* name = file_path(pageId.fileId).c_str();
 
-        int pos = lseek(fd, pageId.id * _config.pageSize, SEEK_SET);
-        if (pos < 0) {
-            return pos;
-        }
-        if (pos != pageId.id * _config.pageSize) {
-            return -100;
-        }
+        int fd = open(name, O_CREAT | O_RDWR, S_IREAD | S_IWRITE);
+        if (fd < 0)
+            return -1;
 
-        int nCopied = read_single(fd, data, _config.pageSize);
-        if (nCopied < 0) {
-            return -200;
-        }
+        _openFiles[pageId.fileId.id] = fd;
+    }
+
+    int fd = _openFiles[pageId.fileId.id];
+
+    int pos = lseek(fd, pageId.id * _config.pageSize, SEEK_SET);
+    if (pos < 0) {
+        return pos;
+    }
+    if (pos != pageId.id * _config.pageSize) {
+        return -100;
+    }
+
+    int nCopied = read_single(fd, data, _config.pageSize);
+    if (nCopied < 0) {
+        return -200;
     }
 
     return pageId.id;

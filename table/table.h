@@ -161,14 +161,29 @@ private:
 public:
     DenseTuple(std::shared_ptr<TableScheme> scheme) : _scheme{scheme} {
         _data = new std::byte[scheme->totalSize()];
+        memset(_data, 0, scheme->totalSize());
         _offsets.push_back(0);
 
         for (int i = 0; i < scheme->columnsCount() - 1; ++i) {
             int last = _offsets[_offsets.size() - 1];
             _offsets.push_back(last + scheme->fieldSize(i));
         }
-        
     }
+
+    DenseTuple(std::shared_ptr<TableScheme> scheme, std::byte* data) : DenseTuple(scheme) {
+        memcpy(_data, data, scheme->totalSize());
+    }
+
+    DenseTuple(const DenseTuple& denseTuple) {
+        _scheme = denseTuple._scheme;
+
+        _data = new std::byte[_scheme->totalSize()];
+        memcpy(_data, denseTuple._data, _scheme->totalSize());
+
+        _offsets = std::vector<int>(denseTuple._offsets.size());
+        std::copy(denseTuple._offsets.begin(), denseTuple._offsets.end(), _offsets.begin());
+    }
+
 
     ~DenseTuple() {
         delete[] _data;
@@ -231,6 +246,7 @@ public:
     void print_values() {
         for (int i = 0; i < _scheme->columnsCount(); ++i) {
             std::string value = as_string(i);
+            value.erase(std::remove(value.begin(), value.end(), '\0'), value.end());
             int d = _scheme->outputSize(i) - value.size();
             std::cout << value;
             for (int i = 0; i < d + 1; ++i) {
@@ -238,6 +254,10 @@ public:
             }
         }
         std::cout << std::endl;
+    }
+
+    std::pair<std::byte*, int> extract() {
+        return { _data, _scheme->totalSize() };
     }
 };
 
@@ -258,22 +278,28 @@ public:
  * use remaining[0] up to remaining[9] to address these bytes
  */
 struct TableMeta {
-    std::int32_t size;
+    /*std::int32_t size;
 
     std::int32_t metaSize;
     std::int32_t nPages;
     std::int32_t nTuples;
 
-    std::byte remaining[0];
+    std::byte remaining[0];*/
+
+    std::int32_t fileId;
+    std::int32_t lastPageId;
 };
 
 struct PageMeta {
-    int size;
+    /*int size;
 
     std::int32_t metaSize;
     std::int32_t nTuples;
 
-    std::byte remaining[0];
+    std::byte remaining[0];*/
+
+    std::int32_t hasTableMeta;
+    std::int32_t dataPtr;
 };
 
 struct TupleMeta {

@@ -6,7 +6,15 @@
 #include "index/btree.h"
 #include <memory>
 
+#define M_TABLES_FILE_ID 1
+#define M_COLUMNS_FILE_ID 2
+
+#define MAX_NAME_LENGTH 50
+
+void init_m_tables(std::shared_ptr<PageCache> pageCache);
+
 std::shared_ptr<Table> create_table(std::shared_ptr<PageCache> pageCache,
+                                    FileId fileId, std::string name,
                                     std::shared_ptr<TableScheme> tableScheme);
 
 void insert_tuple(std::shared_ptr<PageCache> pageCache,

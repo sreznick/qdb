@@ -125,3 +125,7 @@ int PageCache::sync() {
     }
     return 0;
 }
+
+int PageCache::page_size() {
+    return _storage.page_size();
+}
