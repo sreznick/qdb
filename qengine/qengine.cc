@@ -157,6 +157,7 @@ std::shared_ptr<TableScheme> get_m_columns_scheme() {
     m_columns_columns.push_back(ColumnScheme("table_qid", TypeTag::INT));
     m_columns_columns.push_back(ColumnScheme("name", TypeTag::VARCHAR, MAX_NAME_LENGTH));
     m_columns_columns.push_back(ColumnScheme("type_id", TypeTag::INT));
+    m_columns_columns.push_back(ColumnScheme("type_size", TypeTag::INT));
     auto m_columns_columns_ptr = std::make_shared<std::vector<ColumnScheme>>(m_columns_columns);
 
     TableScheme m_columns_scheme(m_columns_columns_ptr);
@@ -205,6 +206,7 @@ void insert_into_m_columns(std::shared_ptr<PageCache> pageCache,
         denseTuple.setInt(1, fileId.id);
         denseTuple.setChar(2, tableScheme->name(i));
         denseTuple.setInt(3, tableScheme->typeTag(i));
+        denseTuple.setInt(4, tableScheme->fieldUnfixedSize(i));
 
         insert_tuple_in_file(pageCache, FileId{ M_COLUMNS_FILE_ID }, std::make_shared<DenseTuple>(denseTuple));
     }

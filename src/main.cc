@@ -103,6 +103,7 @@ int init(Storage storage) {
     //   INT table_qid
     //   VARCHAR(50) name
     //   INT type_id - id-поле из структуры TypeInfo
+    //   INT type_size - размер (если он изменяем, иначе 0)
     //
     //
     //  Данные метатаблиц тоже должны присутствовать в метатаблицах
@@ -185,6 +186,64 @@ void example() {
     std::cout << std::endl;
 }
 
+std::pair<std::map<std::string, std::shared_ptr<Table>>, std::int32_t>
+        session_init(std::shared_ptr<PageCache> pageCache) {
+    std::map<std::string, std::shared_ptr<Table>> tableDict;
+
+    std::string m_tables_name("m_tables");
+    std::string m_columns_name("m_columns");
+
+    tableDict[m_tables_name] = std::make_shared<Table>(
+            Table(m_tables_name, get_m_tables_scheme(), FileId { M_TABLES_FILE_ID }));
+    tableDict[m_columns_name] = std::make_shared<Table>(
+            Table(m_columns_name, get_m_columns_scheme(), FileId { M_COLUMNS_FILE_ID }));
+
+    std::int32_t maxFileId = std::max(M_TABLES_FILE_ID, M_COLUMNS_FILE_ID);
+    auto m_tables = select_all(pageCache, tableDict[m_tables_name]);
+
+    std::map<std::int32_t, std::string> nameDict;
+    std::map<std::int32_t, std::map<std::int32_t, ColumnScheme>> columnSchemesDict;
+
+    for (auto m_table : m_tables) {
+        std::int32_t i = m_table.getInt(0);
+        maxFileId = std::max(maxFileId, i);
+
+        nameDict[i] = m_table.getChar(1);
+        columnSchemesDict[i] = std::map<std::int32_t, ColumnScheme>();
+    }
+
+    auto m_columns = select_all(pageCache, tableDict[m_columns_name]);
+
+    for (auto m_column : m_columns) {
+        auto columnId = m_column.getInt(0);
+        auto tableId = m_column.getInt(1);
+        auto columnName = m_column.getChar(2);
+        auto typeId = m_column.getInt(3);
+        auto typeSize = m_column.getInt(4);
+
+        columnSchemesDict[tableId][columnId] = ColumnScheme(columnName, TypesRegistry::typeTag(typeId), typeSize);
+    }
+
+    for (auto m_table : m_tables) {
+        std::int32_t id = m_table.getInt(0);
+        auto tableName = m_table.getChar(1);
+
+        auto currentColumnSchemesDict = columnSchemesDict[id];
+        std::vector<ColumnScheme> columnSchemesVector;
+
+        for (std::int32_t column_i = 0; currentColumnSchemesDict.count(column_i) > 0; ++column_i)
+            columnSchemesVector.push_back(currentColumnSchemesDict[column_i]);
+
+        auto columnSchemesVectorPtr = std::make_shared<std::vector<ColumnScheme>>(columnSchemesVector);
+        TableScheme tableScheme(columnSchemesVectorPtr);
+        auto tableSchemePtr = std::make_shared<TableScheme>(tableScheme);
+
+        tableDict[tableName] = std::make_shared<Table>(Table(tableName, tableSchemePtr, FileId { id }));
+    }
+
+    return { tableDict, maxFileId };
+}
+
 void prompt(std::shared_ptr<PageCache> pageCache) {
 /*
  *  TODO 
@@ -197,23 +256,9 @@ void prompt(std::shared_ptr<PageCache> pageCache) {
  *
  */
 
-    std::map<std::string, std::shared_ptr<Table>> tableDict;
-
-    std::string m_tables_name("m_tables");
-    std::string m_columns_name("m_columns");
-
-    tableDict[m_tables_name] = std::make_shared<Table>(
-            Table(m_tables_name, get_m_tables_scheme(), FileId { M_TABLES_FILE_ID }));
-    tableDict[m_columns_name] = std::make_shared<Table>(
-            Table(m_columns_name, get_m_columns_scheme(), FileId { M_COLUMNS_FILE_ID }));
-
-    // Нахождение максимального FileId.
-
-    int maxFileId = std::max(M_TABLES_FILE_ID, M_COLUMNS_FILE_ID);
-    auto selected = select_all(pageCache, tableDict[m_tables_name]);
-
-    for (auto elem : selected)
-        maxFileId = std::max(maxFileId, elem.getInt(0));
+    auto sessionInitInfo = session_init(pageCache);
+    auto tableDict = sessionInitInfo.first;
+    auto maxFileId = sessionInitInfo.second;
 
     // Обработка запросов.
 
@@ -249,7 +294,7 @@ void prompt(std::shared_ptr<PageCache> pageCache) {
 
                     if (tableDict.count(tableName) == 0) {
                         std::cout << "No such table." << std::endl;
-                        break; // TODO: поиск таблицы в мета-таблицах.
+                        break;
                     }
 
                     auto selected = select_all(pageCache, tableDict[tableName]); // TODO: SELECT с WHERE.
@@ -273,18 +318,34 @@ void prompt(std::shared_ptr<PageCache> pageCache) {
                 case query::Type::CREATE: {
                     auto tableName = ret->createTable()->name();
 
+                    if (tableName.size() > MAX_NAME_LENGTH) {
+                        std::cout << "Table name '" << tableName << "' is too long." << std::endl;
+                        break;
+                    }
+
                     if (tableDict.count(tableName) != 0) {
                         std::cout << "Table already exists." << std::endl;
-                        break; // TODO: поиск таблицы в мета-таблицах?
+                        break;
                     }
 
                     auto fieldDefs = ret->createTable()->fieldDefs();
 
                     std::vector<ColumnScheme> tableColumns;
+
+                    bool brokenFor = false;
                     for (auto fieldDef : *fieldDefs) {
+                        if (fieldDef->name().size() > MAX_NAME_LENGTH) {
+                            std::cout << "Column name '" << fieldDef->name() << "' is too long." << std::endl;
+                            brokenFor = true;
+                            break;
+                        }
+
                         auto dbType = fieldDef->db_type();
                         tableColumns.push_back(ColumnScheme(fieldDef->name(), dbType.first, dbType.second));
                     }
+                    if (brokenFor)
+                        break;
+
                     auto tableColumnsPtr = std::make_shared<std::vector<ColumnScheme>>(tableColumns);
 
                     TableScheme tableScheme(tableColumnsPtr);
@@ -302,7 +363,7 @@ void prompt(std::shared_ptr<PageCache> pageCache) {
 
                     if (tableDict.count(tableName) == 0) {
                         std::cout << "No such table." << std::endl;
-                        break; // TODO: поиск таблицы в мета-таблицах.
+                        break;
                     }
 
                     auto table = tableDict[tableName];

@@ -37,6 +37,12 @@ public:
         _size = size;
     }
 
+    ColumnScheme() {
+        _name = "";
+        _typeTag = TypeTag::INT;
+        _size = 0;
+    }
+
     bool ok() {
         if (TypesRegistry::hasFixedSize(_typeTag) && _size != 0) {
             return false;
@@ -51,6 +57,10 @@ public:
 
     int size() {
         return _size + TypesRegistry::fixedSize(_typeTag);
+    }
+
+    int unfixedSize() {
+        return _size;
     }
 
     bool hasFixedSize() {
@@ -94,7 +104,11 @@ public:
 
     int fieldSize(int i) {
         return (*_columns)[i].size();
-    } 
+    }
+
+    int fieldUnfixedSize(int i) {
+        return (*_columns)[i].unfixedSize();
+    }
 
     int outputSize(int i) {
         return (*_columns)[i].outputSize();
@@ -231,7 +245,9 @@ public:
     std::string getChar(int fieldPos) {
         std::string result;
         for (int i = 0; i < _scheme->fieldSize(fieldPos); ++i) {
-            result.push_back(static_cast<char>(_data[_offsets[fieldPos] + i]));
+            char c = static_cast<char>(_data[_offsets[fieldPos] + i]);
+            if (c != '\0')
+                result.push_back(c);
         }
 
         return result;
@@ -280,7 +296,6 @@ public:
     void print_values() {
         for (int i = 0; i < _scheme->columnsCount(); ++i) {
             std::string value = as_string(i);
-            value.erase(std::remove(value.begin(), value.end(), '\0'), value.end());
             int d = _scheme->outputSize(i) - value.size();
             std::cout << value;
             for (int i = 0; i < d + 1; ++i) {
