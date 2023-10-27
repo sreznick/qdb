@@ -37,6 +37,12 @@ public:
         _size = size;
     }
 
+    ColumnScheme() {
+        _name = "";
+        _typeTag = TypeTag::INT;
+        _size = 0;
+    }
+
     bool ok() {
         if (TypesRegistry::hasFixedSize(_typeTag) && _size != 0) {
             return false;
@@ -51,6 +57,10 @@ public:
 
     int size() {
         return _size + TypesRegistry::fixedSize(_typeTag);
+    }
+
+    int unfixedSize() {
+        return _size;
     }
 
     bool hasFixedSize() {
@@ -69,6 +79,8 @@ public:
         int valueSize = 20;
         switch (_typeTag) {
             case TypeTag::INT:
+            case TypeTag::DOUBLE:
+            case TypeTag::BOOL:
                 valueSize = 10;
         }
         return std::max(valueSize, static_cast<int>(_name.size()));
@@ -92,7 +104,11 @@ public:
 
     int fieldSize(int i) {
         return (*_columns)[i].size();
-    } 
+    }
+
+    int fieldUnfixedSize(int i) {
+        return (*_columns)[i].unfixedSize();
+    }
 
     int outputSize(int i) {
         return (*_columns)[i].outputSize();
@@ -161,14 +177,29 @@ private:
 public:
     DenseTuple(std::shared_ptr<TableScheme> scheme) : _scheme{scheme} {
         _data = new std::byte[scheme->totalSize()];
+        memset(_data, 0, scheme->totalSize());
         _offsets.push_back(0);
 
         for (int i = 0; i < scheme->columnsCount() - 1; ++i) {
             int last = _offsets[_offsets.size() - 1];
             _offsets.push_back(last + scheme->fieldSize(i));
         }
-        
     }
+
+    DenseTuple(std::shared_ptr<TableScheme> scheme, std::byte* data) : DenseTuple(scheme) {
+        memcpy(_data, data, scheme->totalSize());
+    }
+
+    DenseTuple(const DenseTuple& denseTuple) {
+        _scheme = denseTuple._scheme;
+
+        _data = new std::byte[_scheme->totalSize()];
+        memcpy(_data, denseTuple._data, _scheme->totalSize());
+
+        _offsets = std::vector<int>(denseTuple._offsets.size());
+        std::copy(denseTuple._offsets.begin(), denseTuple._offsets.end(), _offsets.begin());
+    }
+
 
     ~DenseTuple() {
         delete[] _data;
@@ -185,6 +216,27 @@ public:
         return result;
     }
 
+    void setDouble(int fieldPos, double value) {
+        ::memcpy(_data + _offsets[fieldPos], &value, 8);
+    }
+
+    double getDouble(int fieldPos) {
+        double result;
+        ::memcpy(&result, _data + _offsets[fieldPos], 8);
+
+        return result;
+    }
+
+    void setBool(int fieldPos, bool value) {
+        ::memcpy(_data + _offsets[fieldPos], &value, 1);
+    }
+
+    bool getBool(int fieldPos) {
+        bool result;
+        ::memcpy(&result, _data + _offsets[fieldPos], 1);
+
+        return result;
+    }
 
     void setChar(int fieldPos, std::string value) {
         ::memcpy(_data + _offsets[fieldPos], value.c_str(), value.size());
@@ -193,7 +245,9 @@ public:
     std::string getChar(int fieldPos) {
         std::string result;
         for (int i = 0; i < _scheme->fieldSize(fieldPos); ++i) {
-            result.push_back(static_cast<char>(_data[_offsets[fieldPos] + i]));
+            char c = static_cast<char>(_data[_offsets[fieldPos] + i]);
+            if (c != '\0')
+                result.push_back(c);
         }
 
         return result;
@@ -207,6 +261,17 @@ public:
                 ss << s;
                 break;
             }
+            case TypeTag::DOUBLE: {
+                std::string s = std::to_string(getDouble(fieldPos));
+                ss << s;
+                break;
+            }
+            case TypeTag::BOOL: {
+                std::string s = std::to_string(getBool(fieldPos));
+                ss << s;
+                break;
+            }
+            case TypeTag::CHAR:
             case TypeTag::VARCHAR: {
                 ss << getChar(fieldPos);
             }
@@ -239,6 +304,10 @@ public:
         }
         std::cout << std::endl;
     }
+
+    std::pair<std::byte*, int> extract() {
+        return { _data, _scheme->totalSize() };
+    }
 };
 
 /*
@@ -258,22 +327,29 @@ public:
  * use remaining[0] up to remaining[9] to address these bytes
  */
 struct TableMeta {
-    std::int32_t size;
+    /*std::int32_t size;
 
     std::int32_t metaSize;
     std::int32_t nPages;
     std::int32_t nTuples;
 
-    std::byte remaining[0];
+    std::byte remaining[0];*/
+
+    std::int32_t fileId;
+    std::int32_t lastPageId;
+    std::int32_t tupleNum;
 };
 
 struct PageMeta {
-    int size;
+    /*int size;
 
     std::int32_t metaSize;
     std::int32_t nTuples;
 
-    std::byte remaining[0];
+    std::byte remaining[0];*/
+
+    std::int32_t hasTableMeta;
+    std::int32_t dataPtr;
 };
 
 struct TupleMeta {
